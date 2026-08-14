@@ -1,0 +1,10 @@
+services:
+  line-hf-bot:
+    build: .
+    image: line-hf-bot
+    container_name: line-hf-bot
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
