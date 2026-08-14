@@ -52,6 +52,12 @@ public sealed class AppOptions
 
     /// <summary>In-memory TTL (minutes) for generated media.</summary>
     public int MediaTtlMinutes { get; set; } = 10;
+
+    /// <summary>
+    /// Enable the /video command. Off by default: text-to-video needs a provider-specific
+    /// integration (async job APIs), so the scaffold ships disabled until a provider is wired.
+    /// </summary>
+    public bool VideoEnabled { get; set; }
 }
 
 /// <summary>Background queue settings (section: "Queue").</summary>

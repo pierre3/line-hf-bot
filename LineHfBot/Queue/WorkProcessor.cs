@@ -43,7 +43,15 @@ public sealed class WorkProcessor(
                     await HandleImageAsync(item, cancellationToken);
                     break;
                 case WorkKind.Video:
-                    await HandleVideoAsync(item, cancellationToken);
+                    if (appOptions.Value.VideoEnabled)
+                    {
+                        await HandleVideoAsync(item, cancellationToken);
+                    }
+                    else
+                    {
+                        // text-to-video needs a provider integration; ships disabled for now.
+                        await SendAsync(item, UserMessages.NotYetImplemented, cancellationToken);
+                    }
                     break;
             }
         }

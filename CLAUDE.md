@@ -29,7 +29,7 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
   `HuggingFace__VideoEndpoint`(text-to-video。`{model}` を VideoModel で置換。プロバイダ依存。バイト or JSON(URL) 両対応),
   `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
-- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10)
+- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ)
 - `Queue__Capacity`(100), `Queue__Workers`(2)
 - `Chat__MaxHistory`(20)
 
