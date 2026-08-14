@@ -39,7 +39,7 @@ cp .env.example .env
 ```bash
 docker compose up --build      # listens on :8080
 ```
-For local development instead: `dotnet run --project LineHfBot` and use `dotnet user-secrets` for the values.
+For local development instead: `dotnet run --project LineHfBot --urls http://localhost:8080` and use `dotnet user-secrets` for the values (the `--urls` keeps the port at 8080 to match the tunnel step below).
 
 ### 3. Expose with a tunnel
 ```bash
@@ -48,7 +48,7 @@ devtunnel host -p 8080 --allow-anonymous     # note the https URL; also set it a
 
 ### 4. Set the webhook
 Enable "Use webhook" (and turn off auto-reply) in the LINE console, then point the webhook at your tunnel.
-The included `line` CLI ([Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet)) makes this easy:
+The `line` CLI ([Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet), installed as a global tool) makes this easy:
 ```bash
 dotnet tool install -g Line.OpenApi.Tools
 line config set default --token "YOUR_CHANNEL_ACCESS_TOKEN"

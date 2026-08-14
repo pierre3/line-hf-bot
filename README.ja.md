@@ -39,7 +39,7 @@ cp .env.example .env
 ```bash
 docker compose up --build      # :8080 で待ち受け
 ```
-ローカル開発なら: `dotnet run --project LineHfBot`（値は `dotnet user-secrets` で設定）。
+ローカル開発なら: `dotnet run --project LineHfBot --urls http://localhost:8080`（値は `dotnet user-secrets` で設定。`--urls` で下のトンネル手順と同じ 8080 に揃えます）。
 
 ### 3. トンネルで公開
 ```bash
@@ -48,7 +48,7 @@ devtunnel host -p 8080 --allow-anonymous     # 表示された https URL を App
 
 ### 4. Webhook を設定
 LINE コンソールで「Webhook の利用」をオン（応答メッセージはオフ）にし、Webhook をトンネルに向けます。
-同梱の `line` CLI（[Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet)）を使うと簡単です:
+`line` CLI（[Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet)。グローバルツールとして導入）を使うと簡単です:
 ```bash
 dotnet tool install -g Line.OpenApi.Tools
 line config set default --token "チャネルアクセストークン"

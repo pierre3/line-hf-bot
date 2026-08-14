@@ -55,7 +55,7 @@ public sealed class WorkProcessor(
                     break;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to handle item kind={Kind} user={User}", item.Kind, item.UserId);
             // Best-effort notification; ignore secondary failures.

@@ -35,6 +35,9 @@ Verdict: PASS | FAIL
 
 ## 記録インデックス
 <!-- 新しい判定を上に追記する -->
+- 2026-08-14 **PASS** ドキュメントレビュー（image/video/docker）— [`10-doc-image-video-docker.md`](10-doc-image-video-docker.md)（Minor 2件を修正）
+- 2026-08-14 **PASS** セキュリティレビュー（image/video/docker）— [`09-security-image-video-docker.md`](09-security-image-video-docker.md)（Low 1・Info 2、脆弱パッケージ0）
+- 2026-08-14 **PASS** 実装レビュー（image/video/docker）— [`08-impl-image-video-docker.md`](08-impl-image-video-docker.md)（Minor 4、OCE 除外を修正）
 - 2026-08-14 **PASS** ドキュメントレビュー（chat増分）— [`07-doc-chat.md`](07-doc-chat.md)（初回 FAIL→`ChatEndpoint` 記載を追記して PASS）
 - 2026-08-14 **PASS** セキュリティレビュー（chat増分）— [`06-security-chat.md`](06-security-chat.md)（Critical/High/Medium なし。worker タイムアウトを追加対応）
 - 2026-08-14 **PASS** 実装レビュー（chat増分）— [`05-impl-chat.md`](05-impl-chat.md)（Blocker/Major なし、Minor 3。worker タイムアウトを追加対応）
