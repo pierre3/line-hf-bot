@@ -1,6 +1,11 @@
+using System.Text;
 using Line.OpenApi.Messaging.Webhook;
 using Line.OpenApi.Messaging.Webhook.DependencyInjection;
 using LineHfBot.Configuration;
+
+// Windows コンソールでの日本語ログ文字化けを防ぐため UTF-8 に固定。
+// コンソールが無い/リダイレクト時に失敗し得るため防御的に握る。
+try { Console.OutputEncoding = Encoding.UTF8; } catch { /* ignore */ }
 
 var builder = WebApplication.CreateBuilder(args);
 
