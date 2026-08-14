@@ -30,6 +30,13 @@ public sealed class HuggingFaceOptions
     /// text-to-image and returns raw image bytes.
     /// </summary>
     public string ImageEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+
+    /// <summary>
+    /// Text-to-video endpoint template. "{model}" is replaced with <see cref="VideoModel"/>.
+    /// Video support is provider-dependent; some providers return raw bytes, others return JSON
+    /// containing a video URL (both are handled).
+    /// </summary>
+    public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;

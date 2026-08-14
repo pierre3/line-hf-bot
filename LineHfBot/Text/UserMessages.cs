@@ -22,6 +22,10 @@ public static class UserMessages
 
     public const string ImageUsage = "画像の説明を入れて送ってください。例: /image 夕日の海辺";
 
+    public const string GeneratingVideo = "動画を作っています…少し時間がかかります 🎬";
+
+    public const string VideoUsage = "動画の説明を入れて送ってください。例: /video 走る猫";
+
     public const string Busy = "いま混み合っています。少し待ってから、もう一度送ってください。";
 
     public const string EmptyAnswer = "うまく返事を作れませんでした。もう一度試してみてください。";

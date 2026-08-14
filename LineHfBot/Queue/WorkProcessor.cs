@@ -9,12 +9,13 @@ using Microsoft.Extensions.Options;
 namespace LineHfBot.Queue;
 
 /// <summary>
-/// Handles a dequeued item: chat via HF, image generation, plus /reset and /help.
-/// Video is a placeholder until its increment lands. Replies (free) when possible, falling back to push.
+/// Handles a dequeued item: chat via HF, image and video generation, plus /reset and /help.
+/// Replies (free) when possible, falling back to push.
 /// </summary>
 public sealed class WorkProcessor(
     IChatService chat,
     IImageService imageService,
+    IVideoService videoService,
     ChatHistoryStore history,
     MediaStore mediaStore,
     ProcessedEventStore processedEvents,
@@ -42,7 +43,7 @@ public sealed class WorkProcessor(
                     await HandleImageAsync(item, cancellationToken);
                     break;
                 case WorkKind.Video:
-                    await SendAsync(item, UserMessages.NotYetImplemented, cancellationToken);
+                    await HandleVideoAsync(item, cancellationToken);
                     break;
             }
         }
@@ -56,17 +57,48 @@ public sealed class WorkProcessor(
 
     private async Task HandleImageAsync(WorkItem item, CancellationToken cancellationToken)
     {
-        // Idempotency: LINE may redeliver webhooks; do not generate the same image twice.
+        var baseUrl = await PrepareMediaAsync(item, UserMessages.ImageUsage, UserMessages.GeneratingImage, cancellationToken);
+        if (baseUrl is null)
+        {
+            return;
+        }
+
+        var media = await imageService.GenerateAsync(item.Text, cancellationToken);
+        var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
+        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken);
+    }
+
+    private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)
+    {
+        var baseUrl = await PrepareMediaAsync(item, UserMessages.VideoUsage, UserMessages.GeneratingVideo, cancellationToken);
+        if (baseUrl is null)
+        {
+            return;
+        }
+
+        var media = await videoService.GenerateAsync(item.Text, cancellationToken);
+        var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
+        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken);
+    }
+
+    /// <summary>
+    /// Shared prelude for media generation: dedupe redelivered events, validate the prompt and
+    /// PublicBaseUrl, and send the "generating" ack. Returns the trimmed base URL to proceed, or
+    /// null when the caller should stop (a response has already been sent).
+    /// </summary>
+    private async Task<string?> PrepareMediaAsync(WorkItem item, string usage, string generating, CancellationToken cancellationToken)
+    {
+        // Idempotency: LINE may redeliver webhooks; do not generate the same media twice.
         if (!processedEvents.TryMarkNew(item.WebhookEventId))
         {
-            logger.LogInformation("Duplicate image event skipped: eventId={EventId}", item.WebhookEventId);
-            return;
+            logger.LogInformation("Duplicate {Kind} event skipped: eventId={EventId}", item.Kind, item.WebhookEventId);
+            return null;
         }
 
         if (string.IsNullOrWhiteSpace(item.Text))
         {
-            await SendAsync(item, UserMessages.ImageUsage, cancellationToken);
-            return;
+            await SendAsync(item, usage, cancellationToken);
+            return null;
         }
 
         var baseUrl = appOptions.Value.PublicBaseUrl;
@@ -74,20 +106,16 @@ public sealed class WorkProcessor(
         {
             logger.LogError("App:PublicBaseUrl is not set; cannot deliver generated media.");
             await SendAsync(item, UserMessages.Error, cancellationToken);
-            return;
+            return null;
         }
 
         // Immediate ack via the (free) reply token; the result is pushed when ready.
         if (!string.IsNullOrEmpty(item.ReplyToken))
         {
-            await messenger.TryReplyTextAsync(item.ReplyToken, UserMessages.GeneratingImage, cancellationToken);
+            await messenger.TryReplyTextAsync(item.ReplyToken, generating, cancellationToken);
         }
 
-        var media = await imageService.GenerateAsync(item.Text, cancellationToken);
-        var id = mediaStore.Save(media);
-        var url = $"{baseUrl.TrimEnd('/')}/media/{id}";
-
-        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken);
+        return baseUrl.TrimEnd('/');
     }
 
     /// <summary>Reply (free) if possible, otherwise push.</summary>

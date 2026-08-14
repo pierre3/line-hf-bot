@@ -14,6 +14,9 @@ public interface ILineMessenger
 
     /// <summary>Push an image message (both URLs must be public HTTPS).</summary>
     Task PushImageAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken);
+
+    /// <summary>Push a video message (mp4 + preview image, both public HTTPS).</summary>
+    Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken);
 }
 
 /// <summary>Thin wrapper over <see cref="MessagingClient"/>.</summary>
@@ -72,6 +75,28 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
         catch (Exception ex)
         {
             logger.LogWarning("Push image failed ({Detail}).", DescribeLineError(ex));
+            throw;
+        }
+    }
+
+    public async Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await client.Api.V2.Bot.Message.Push.PostAsync(new PushMessageRequest
+            {
+                To = userId,
+                Messages = [new VideoMessage
+                {
+                    Type = "video",
+                    OriginalContentUrl = originalContentUrl,
+                    PreviewImageUrl = previewImageUrl,
+                }],
+            }, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Push video failed ({Detail}).", DescribeLineError(ex));
             throw;
         }
     }

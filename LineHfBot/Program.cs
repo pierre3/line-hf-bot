@@ -44,6 +44,8 @@ builder.Services.AddSingleton<MediaStore>();
 builder.Services.AddSingleton<ProcessedEventStore>();
 builder.Services.AddHttpClient<IImageService, HuggingFaceImageService>(
     c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan); // per-request timeout is applied in the service
+builder.Services.AddHttpClient<IVideoService, HuggingFaceVideoService>(
+    c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan);
 
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
@@ -61,6 +63,9 @@ app.MapGet("/media/{id}", (string id, MediaStore store) =>
     store.TryGet(id, out var media) && media is not null
         ? Results.File(media.Bytes, media.ContentType)
         : Results.NotFound());
+
+// Placeholder preview image required for LINE video messages.
+app.MapGet(VideoPreview.Path, () => Results.File(VideoPreview.Bytes, VideoPreview.ContentType));
 
 // LINE webhook: verify the signature, then return 2xx immediately.
 // Heavy work is handed off to the background queue (LINE recommends async processing).
@@ -136,6 +141,21 @@ if (app.Environment.IsDevelopment())
         try
         {
             var media = await images.GenerateAsync(prompt ?? "", ct);
+            return Results.File(media.Bytes, media.ContentType);
+        }
+        catch (Exception ex)
+        {
+            return Results.Text($"ERROR {ex.GetType().Name}: {ex.Message}");
+        }
+    });
+
+    // Dev-only: exercise the HF video path in isolation. Returns the video bytes, or an error string.
+    // Example: GET /dev/video?prompt=a%20running%20cat  (curl -o out.mp4)
+    app.MapGet("/dev/video", async (string prompt, IVideoService videos, CancellationToken ct) =>
+    {
+        try
+        {
+            var media = await videos.GenerateAsync(prompt ?? "", ct);
             return Results.File(media.Bytes, media.ContentType);
         }
         catch (Exception ex)
