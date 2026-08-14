@@ -1,31 +1,33 @@
 #requires -Version 7
 <#
 .SYNOPSIS
-    One-shot: build & run the containerized bot, health-check it, and (optionally) point the
-    LINE webhook at your tunnel. Handles the corporate TLS-inspecting proxy case by trusting the
-    host's root CAs.
-
-.DESCRIPTION
-    Start your tunnel first (its URL is known immediately, even before the app is up), then run
-    this with -Port and -TunnelUrl to do everything in one go.
+    One command to run the containerized bot and (optionally) manage the Dev Tunnel.
+    Trusts the host root CAs (corporate proxy), builds/runs the container, health-checks it,
+    starts a persistent Dev Tunnel in the background, and sets + verifies the LINE webhook.
 
 .PARAMETER Port
     Host port to expose (written to HOST_PORT in .env). Defaults to the current HOST_PORT, else 8080.
 
+.PARAMETER StartTunnel
+    Manage a persistent Dev Tunnel: create it if missing, host it in the background (no separate
+    terminal needed), derive its stable URL, and use it for App__PublicBaseUrl + the webhook.
+    Requires a prior `devtunnel user login`.
+
+.PARAMETER TunnelName
+    Persistent Dev Tunnel id used with -StartTunnel. Default: line-hf-bot.
+
 .PARAMETER TunnelUrl
-    Public HTTPS base URL of your tunnel. When given, sets App__PublicBaseUrl and configures +
-    verifies the LINE webhook via the `line` CLI. Omit to only build/run/health-check.
+    Use this tunnel URL explicitly instead of -StartTunnel (e.g. a tunnel you host yourself).
 
 .PARAMETER Rebuild
-    Rebuild the image (docker compose up --build). Use after code or cert changes.
+    Rebuild the image (docker compose up --build).
 
 .PARAMETER ExportCerts
-    Force re-exporting the host root CAs into ./certs (done automatically if ./certs has none).
+    Force re-exporting the host root CAs into ./certs.
 
 .EXAMPLE
-    # tunnel first, then one command does the rest:
-    devtunnel host -p 8081 --allow-anonymous
-    ./scripts/run.ps1 -Port 8081 -TunnelUrl https://abcd-8081.jp.devtunnels.ms -Rebuild
+    # everything in one command (tunnel hosted in the background):
+    ./scripts/run.ps1 -Port 8081 -StartTunnel -Rebuild
 
 .EXAMPLE
     # just build/run/health-check:
@@ -34,6 +36,8 @@
 [CmdletBinding()]
 param(
     [int]$Port,
+    [switch]$StartTunnel,
+    [string]$TunnelName = 'line-hf-bot',
     [string]$TunnelUrl,
     [switch]$Rebuild,
     [switch]$ExportCerts
@@ -59,8 +63,15 @@ function Get-EnvValue([string]$Path, [string]$Key) {
     if ($m) { return $m.Matches[0].Groups[1].Value } else { return $null }
 }
 
-# 1. Trust host root CAs (needed behind a corporate TLS-inspecting proxy so the container can
-#    restore packages and reach Hugging Face / LINE over HTTPS). No-op on normal networks.
+function Get-TunnelUrl([string]$Name, [string]$HostPort) {
+    $out = (& devtunnel show $Name 2>&1 | Out-String)
+    $urls = [regex]::Matches($out, 'https://[a-zA-Z0-9\-\.]+\.devtunnels\.ms') | ForEach-Object { $_.Value } | Select-Object -Unique
+    $perPort = $urls | Where-Object { $_ -match "-$HostPort\." } | Select-Object -First 1
+    if ($perPort) { return $perPort }
+    return ($urls | Select-Object -First 1)
+}
+
+# 1. Trust host root CAs (corporate TLS-inspecting proxy). No-op on normal networks.
 $certDir = Join-Path $root 'certs'
 $haveCerts = @(Get-ChildItem (Join-Path $certDir '*.crt') -ErrorAction SilentlyContinue).Count -gt 0
 if ($ExportCerts -or -not $haveCerts) {
@@ -73,28 +84,58 @@ if ($ExportCerts -or -not $haveCerts) {
     }
 }
 
-# 2. Ensure .env exists (from the template) and is filled in.
+# 2. Ensure .env exists and is filled in.
 if (-not (Test-Path '.env')) {
     Copy-Item '.env.example' '.env'
     Write-Warning 'Created .env from .env.example. Fill in Line__ChannelSecret, Line__ChannelAccessToken and HuggingFace__ApiKey, then re-run.'
     return
 }
 
-# 3. Apply parameters to .env.
+# 3. Host port.
 if ($PSBoundParameters.ContainsKey('Port')) { Set-EnvKey '.env' 'HOST_PORT' "$Port" }
+$effectivePort = if ($PSBoundParameters.ContainsKey('Port')) { "$Port" } else { (Get-EnvValue '.env' 'HOST_PORT') }
+if (-not $effectivePort) { $effectivePort = '8080' }
+
+# 4. Dev Tunnel (persistent, hosted in the background).
+if ($StartTunnel) {
+    $who = (& devtunnel user show 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0 -or $who -match 'not logged in') {
+        throw 'Not logged in to Dev Tunnels. Run: devtunnel user login'
+    }
+
+    & devtunnel show $TunnelName 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Creating persistent tunnel '$TunnelName' ..."
+        devtunnel create $TunnelName --allow-anonymous | Out-Null
+    }
+    devtunnel port create $TunnelName -p $effectivePort --protocol http 2>&1 | Out-Null  # ignore if it exists
+    devtunnel access create $TunnelName --anonymous 2>&1 | Out-Null                        # ensure anonymous
+
+    $TunnelUrl = Get-TunnelUrl $TunnelName $effectivePort
+    if (-not $TunnelUrl) { throw "Could not determine the tunnel URL. Check: devtunnel show $TunnelName" }
+    Write-Host "Tunnel URL: $TunnelUrl"
+
+    if (-not (Get-Process devtunnel -ErrorAction SilentlyContinue)) {
+        Write-Host 'Starting the tunnel host in the background ...'
+        Start-Process devtunnel -ArgumentList 'host', $TunnelName -WindowStyle Hidden
+        Start-Sleep -Seconds 3
+    } else {
+        Write-Host 'A devtunnel process is already running; assuming the tunnel is hosted.'
+    }
+}
+
+# 5. Persist the public base URL (used to build image URLs LINE fetches).
 if ($TunnelUrl) {
     if ($TunnelUrl -notmatch '^https://') { throw 'TunnelUrl must be an https:// URL.' }
     $TunnelUrl = $TunnelUrl.TrimEnd('/')
     Set-EnvKey '.env' 'App__PublicBaseUrl' $TunnelUrl
 }
 
-# 4. Build & run.
+# 6. Build & run.
 if ($Rebuild) { docker compose up --build -d } else { docker compose up -d }
 if ($LASTEXITCODE -ne 0) { throw 'docker compose failed. Is Docker running? Is HOST_PORT free?' }
 
-# 5. Health check on the effective host port.
-$effectivePort = if ($PSBoundParameters.ContainsKey('Port')) { "$Port" } else { (Get-EnvValue '.env' 'HOST_PORT') }
-if (-not $effectivePort) { $effectivePort = '8080' }
+# 7. Health check.
 $healthUrl = "http://localhost:$effectivePort/health"
 Write-Host "Waiting for $healthUrl ..."
 $ok = $false
@@ -107,7 +148,7 @@ for ($i = 0; $i -lt 30; $i++) {
 if ($ok) { Write-Host "Health OK: $healthUrl" -ForegroundColor Green }
 else { Write-Warning 'Health check did not pass. Inspect logs: docker compose logs -f' }
 
-# 6. Webhook (only when a tunnel URL was given).
+# 8. Webhook (when we have a tunnel URL).
 if ($TunnelUrl) {
     if (-not (Get-Command 'line' -ErrorAction SilentlyContinue)) {
         Write-Host 'Installing the line CLI (Line.OpenApi.Tools) ...'
@@ -119,10 +160,9 @@ if ($TunnelUrl) {
     line webhook set-endpoint --url "$TunnelUrl/webhook"
     line webhook test-endpoint
     Write-Host ''
-    Write-Host 'Webhook set. Now message your bot on LINE (chat, /image ...).' -ForegroundColor Green
+    Write-Host 'Ready. Message your bot on LINE (chat, /image ...).' -ForegroundColor Green
 } else {
     Write-Host ''
-    Write-Host 'Next steps:' -ForegroundColor Cyan
-    Write-Host "  1) Expose the port:  devtunnel host -p $effectivePort --allow-anonymous"
-    Write-Host "  2) Re-run with the tunnel URL:  ./scripts/run.ps1 -Port $effectivePort -TunnelUrl https://<your-tunnel>"
+    Write-Host 'Next: expose the port and set the webhook, e.g.:' -ForegroundColor Cyan
+    Write-Host "  ./scripts/run.ps1 -Port $effectivePort -StartTunnel"
 }
