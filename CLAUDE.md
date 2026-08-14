@@ -1,0 +1,54 @@
+# CLAUDE.md — line-hf-bot
+
+LINE から Hugging Face のモデル（チャット / 画像生成 / 動画生成）を使える AI ボット。
+ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・小規模利用向けで、
+ローカル PC で Docker 実行 → Dev トンネル等で公開 → LINE に接続、という手軽さが売り。
+
+実装の詳細プランは `C:\Users\小林寛忠\.claude\plans\foamy-fluttering-haven.md` を参照。
+
+## 技術スタック
+- **.NET 10** / C# 14 / ASP.NET Minimal API（単一プロジェクト `LineHfBot`）
+- **LINE**: `Line.OpenApi.Bot`（Messaging + Webhook）。**.NET 10 専用**。
+  - 受信: `AddLineWebhook` + `WebhookRequestParser.ParseAsync(body, signature)`
+  - 送信: `MessagingClient.CreateWithStaticToken(token)` → Reply / Push
+  - 制約: 画像・動画メッセージは**公開 HTTPS URL 必須**（生バイト不可）→ 生成物は `/media/{id}` で自前配信
+- **Semantic Kernel**: `Microsoft.SemanticKernel.Connectors.HuggingFace`（チャット）。画像/動画は HF Inference Providers を `HttpClient` で呼び、**SK KernelFunction/Plugin としてラップ**
+- **HF Inference**: text-to-image / text-to-video は `{"inputs","parameters"}` を POST → **生メディアバイト**。認証 `Bearer hf_***`。router `https://router.huggingface.co/hf-inference/models/{modelId}`
+
+## アーキテクチャ要点
+- webhook は署名検証後**即 200**。生成は `System.Threading.Channels` + `BackgroundService` で非同期処理し、完了後に **Push API** で送信（reply トークンは短命なため）。
+- モード切替: 通常テキスト=チャット、`/image <prompt>`・`/video <prompt>`・`/reset`・`/help`。結果に **QuickReply** を付与。
+- 生成メディアは **メモリ内 TTL キャッシュ**（既定10分、`IMemoryCache`）で保持し `/media/{id}` 配信。
+- 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
+
+## 設定（すべて環境変数 / appsettings）
+`Line__ChannelSecret`, `Line__ChannelAccessToken`, `HuggingFace__ApiKey`,
+`HuggingFace__ChatModel` / `ImageModel` / `VideoModel`, `PublicBaseUrl`, `MediaTtlMinutes`
+※ トークン類は**絶対にコミットしない**（`.env` は `.gitignore`、`.env.example` のみ管理）。
+
+## よく使うコマンド
+```
+dotnet restore / dotnet build / dotnet run
+dotnet test
+docker build -t line-hf-bot . / docker compose up
+```
+ローカル公開: `devtunnel host -p 8080`（→ URL を `PublicBaseUrl` と LINE Webhook `{url}/webhook` に設定）
+
+## 開発を支援するツール（導入済み/推奨）
+- **dotnet-claude-kit** プラグイン: .NET 10 特化。Roslyn MCP でトークン効率よくコード探索。`/scaffold` `/verify` `/tdd` `/security-scan` `/build-fix` などを活用。
+- **C# LSP** (`csharp-lsp`): IntelliSense / リファクタ / 診断。
+- **セキュリティ**: `42crunch-api-security-testing`, `claude-security`, 組み込み `/security-review`（Webhook 署名・トークン漏洩・SSRF を重点確認）。
+- **MCP（接続済み）**: Context7（Semantic Kernel / line-openapi-dotnet ドキュメント）、Microsoft Learn（ASP.NET / Docker / Container Apps）。ライブラリ仕様は推測せずこれらで確認する。
+- **カスタムスキル** `line-webhook-test`: 実機 LINE なしで署名付きイベントをローカル `/webhook` に送って検証。
+
+## レビューゲート（4段階）
+実装は `.claude/agents/` の**薄いラッパ**サブエージェントが担うゲートを順に通す。実分析は既存プラグインへ委譲。
+1. **仕様** `spec-review-gate`（自前） → 2. **実装** `impl-review-gate`（→ `dotnet-claude-kit:code-review`）
+→ 3. **セキュリティ** `security-review-gate`（→ `dotnet-claude-kit:security-scan` 他） → 4. **ドキュメント** `doc-review-gate`（自前）
+- 起動はオンデマンド（「仕様ゲート回して」等、または各フェーズ完了時）。
+- 記録付きソフトゲート。**FAIL は既定でブロック**（差し戻し）。判定は `docs/reviews/` に残す。詳細は `docs/reviews/README.md`。
+
+## 規約
+- モダン C#（primary constructor、collection expression、`IHttpClientFactory`、`TimeProvider`）を用いる。
+- 外部 I/O（LINE / HF）失敗はユーザーに通知し、握りつぶさない。
+- 秘密情報をログ・コミットに出さない。

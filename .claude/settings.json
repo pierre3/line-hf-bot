@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "allow": [
+      "Bash(dotnet restore *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet run *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet add *)",
+      "Bash(dotnet publish *)",
+      "Bash(dotnet format *)",
+      "Bash(docker build *)",
+      "Bash(docker compose *)",
+      "PowerShell(dotnet restore *)",
+      "PowerShell(dotnet build *)",
+      "PowerShell(dotnet run *)",
+      "PowerShell(dotnet test *)",
+      "PowerShell(dotnet add *)",
+      "PowerShell(dotnet publish *)",
+      "PowerShell(dotnet format *)",
+      "PowerShell(docker build *)",
+      "PowerShell(docker compose *)"
+    ]
+  },
+  "enabledPlugins": {
+    "dotnet-claude-kit@dotnet-claude-kit": true,
+    "csharp-lsp@claude-plugins-official": true,
+    "42crunch-api-security-testing@claude-plugins-official": true,
+    "claude-security@claude-plugins-official": true
+  }
+}
