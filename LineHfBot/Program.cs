@@ -89,11 +89,33 @@ app.MapPost("/webhook", async (
 });
 
 // Development-only diagnostic: exercise the Hugging Face chat path in isolation (no LINE).
+// Reports the error/timeout in the body so problems are visible in the curl output.
 // Never mapped in Production. Example: GET /dev/chat?message=hello
 if (app.Environment.IsDevelopment())
 {
-    app.MapGet("/dev/chat", async (string message, IChatService chat, CancellationToken ct) =>
-        Results.Text(await chat.CompleteAsync("dev-user", message, ct)));
+    app.MapGet("/dev/chat", async (
+        string message,
+        IChatService chat,
+        Microsoft.Extensions.Options.IOptions<HuggingFaceOptions> hf,
+        CancellationToken ct) =>
+    {
+        var timeout = Math.Max(5, hf.Value.ChatTimeoutSeconds);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(timeout));
+        try
+        {
+            var answer = await chat.CompleteAsync("dev-user", message ?? "", cts.Token);
+            return Results.Text(string.IsNullOrWhiteSpace(answer) ? "(empty answer)" : answer);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            return Results.Text($"(timeout after {timeout}s)");
+        }
+        catch (Exception ex)
+        {
+            return Results.Text($"ERROR {ex.GetType().Name}: {ex.Message}");
+        }
+    });
 }
 
 app.Run();
