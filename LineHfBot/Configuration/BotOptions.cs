@@ -23,6 +23,13 @@ public sealed class HuggingFaceOptions
     /// Adjust if your model/provider needs a different base URL.
     /// </summary>
     public string ChatEndpoint { get; set; } = "https://router.huggingface.co";
+
+    /// <summary>
+    /// Text-to-image endpoint template. "{model}" is replaced with <see cref="ImageModel"/>.
+    /// Image support is provider-dependent; adjust the provider segment/model to one that serves
+    /// text-to-image and returns raw image bytes.
+    /// </summary>
+    public string ImageEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;

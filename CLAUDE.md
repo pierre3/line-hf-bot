@@ -26,6 +26,7 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 - `Line__ChannelSecret`, `Line__ChannelAccessToken`
 - `HuggingFace__ApiKey`, `HuggingFace__ChatModel` / `ImageModel` / `VideoModel`,
   `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
+  `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
   `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
 - `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10)
 - `Queue__Capacity`(100), `Queue__Workers`(2)

@@ -18,6 +18,10 @@ public static class UserMessages
 
     public const string NotYetImplemented = "この機能はいま準備中です。もう少しお待ちください。";
 
+    public const string GeneratingImage = "画像を作っています…少しお待ちください 🎨";
+
+    public const string ImageUsage = "画像の説明を入れて送ってください。例: /image 夕日の海辺";
+
     public const string Busy = "いま混み合っています。少し待ってから、もう一度送ってください。";
 
     public const string EmptyAnswer = "うまく返事を作れませんでした。もう一度試してみてください。";

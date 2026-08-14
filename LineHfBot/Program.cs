@@ -6,6 +6,7 @@ using LineHfBot.Ai;
 using LineHfBot.Chat;
 using LineHfBot.Configuration;
 using LineHfBot.Line;
+using LineHfBot.Media;
 using LineHfBot.Messaging;
 using LineHfBot.Queue;
 using Microsoft.SemanticKernel;
@@ -35,13 +36,18 @@ builder.Services.AddHuggingFaceChatCompletion(
     apiKey: hf.ApiKey);
 
 // --- App services ---
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ChatHistoryStore>();
 builder.Services.AddSingleton<IChatService, HuggingFaceChatService>();
 builder.Services.AddSingleton<ILineMessenger, LineMessenger>();
+builder.Services.AddSingleton<MediaStore>();
+builder.Services.AddSingleton<ProcessedEventStore>();
+builder.Services.AddHttpClient<IImageService, HuggingFaceImageService>(
+    c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan); // per-request timeout is applied in the service
 
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
-builder.Services.AddScoped<IWorkProcessor, ChatWorkProcessor>();
+builder.Services.AddScoped<IWorkProcessor, WorkProcessor>();
 builder.Services.AddSingleton<MessageDispatcher>();
 builder.Services.AddHostedService<GenerationWorker>();
 
@@ -49,6 +55,12 @@ var app = builder.Build();
 
 // Health check.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+// Serve generated media (LINE fetches image/video from here). 404 when expired/unknown.
+app.MapGet("/media/{id}", (string id, MediaStore store) =>
+    store.TryGet(id, out var media) && media is not null
+        ? Results.File(media.Bytes, media.ContentType)
+        : Results.NotFound());
 
 // LINE webhook: verify the signature, then return 2xx immediately.
 // Heavy work is handed off to the background queue (LINE recommends async processing).
@@ -110,6 +122,21 @@ if (app.Environment.IsDevelopment())
         catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
         {
             return Results.Text($"(timeout after {timeout}s)");
+        }
+        catch (Exception ex)
+        {
+            return Results.Text($"ERROR {ex.GetType().Name}: {ex.Message}");
+        }
+    });
+
+    // Dev-only: exercise the HF image path in isolation. Returns the image bytes, or an error string.
+    // Example: GET /dev/image?prompt=a%20cat  (curl -o out.png)
+    app.MapGet("/dev/image", async (string prompt, IImageService images, CancellationToken ct) =>
+    {
+        try
+        {
+            var media = await images.GenerateAsync(prompt ?? "", ct);
+            return Results.File(media.Bytes, media.ContentType);
         }
         catch (Exception ex)
         {
