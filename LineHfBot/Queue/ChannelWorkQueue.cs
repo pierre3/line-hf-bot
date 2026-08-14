@@ -5,9 +5,9 @@ using Microsoft.Extensions.Options;
 namespace LineHfBot.Queue;
 
 /// <summary>
-/// <see cref="System.Threading.Channels.Channel{T}"/> ベースの in-memory キュー。
-/// BoundedChannel + FullMode.Wait とし、<see cref="TryEnqueue"/> は満杯時に false を返す
-/// （バックプレッシャで待たず、呼び出し側が「混雑」通知して drop する仕様）。
+/// In-memory queue backed by <see cref="System.Threading.Channels.Channel{T}"/>.
+/// Uses a bounded channel with FullMode.Wait; <see cref="TryEnqueue"/> returns false when full
+/// so the caller can drop the item and tell the user the bot is busy (no blocking backpressure).
 /// </summary>
 public sealed class ChannelWorkQueue : IWorkQueue
 {

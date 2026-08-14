@@ -52,3 +52,9 @@ docker build -t line-hf-bot . / docker compose up
 - モダン C#（primary constructor、collection expression、`IHttpClientFactory`、`TimeProvider`）を用いる。
 - 外部 I/O（LINE / HF）失敗はユーザーに通知し、握りつぶさない。
 - 秘密情報をログ・コミットに出さない。
+
+### 言語ルール
+- **コメント・ログは英語**（開発者/運用向け）。**エンドユーザー向けの文言（LINE 返信など）は日本語**。
+- **公開ドキュメントは英語を既定**とし、**日本語版も用意**（`README.md`＝英語 / `README.ja.md`＝日本語）。
+  `docs/specs`・`docs/reviews` は内部作業ドキュメントとして日本語で運用。
+- 日本語は翻訳調・AI 生成臭を避け、平易で自然な文章にする。

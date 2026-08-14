@@ -1,27 +1,29 @@
 # line-hf-bot
 
-LINE から Hugging Face のモデルを使って **AI チャット・画像生成・動画生成** ができるボット。
-ASP.NET (.NET 10) 製で、ローカル PC で Docker 実行 → トンネル公開 → LINE に接続するだけで手軽に使えることを目指します。
-（クラウドホストも可能）
+English | [日本語](README.ja.md)
 
-> ⚠️ **開発中（Work in Progress）** — 現在は仕様確定フェーズです。実装はこれから進みます。
+A LINE bot that uses Hugging Face models for **AI chat, image generation, and video generation**.
+Built on ASP.NET (.NET 10). The aim is to keep it easy to run: start the Docker image on your PC,
+expose it through a tunnel, and connect it to LINE. It can also be hosted in the cloud.
 
-## 特長（予定）
-- 💬 テキストチャット（会話履歴を保持、Semantic Kernel の HuggingFace コネクタ）
-- 🎨 画像生成（`/image <prompt>`）
-- 🎬 動画生成（`/video <prompt>`）
-- 🐳 Docker イメージとして配布。ローカル + Dev トンネルで手軽に、あるいはクラウドでホスト
+> ⚠️ **Work in progress** — currently at the spec / early-implementation stage.
 
-## 技術スタック
+## Features (planned)
+- 💬 Text chat with conversation history (Semantic Kernel's Hugging Face connector)
+- 🎨 Image generation (`/image <prompt>`)
+- 🎬 Video generation (`/video <prompt>`)
+- 🐳 Shipped as a Docker image. Run locally with a dev tunnel, or host it in the cloud.
+
+## Tech stack
 - .NET 10 / ASP.NET Minimal API
-- [pierre3/line-openapi-dotnet](https://github.com/pierre3/line-openapi-dotnet)（`Line.OpenApi.Bot`）
-- [Semantic Kernel](https://github.com/microsoft/semantic-kernel)（HuggingFace コネクタ）
-- Hugging Face Inference Providers（画像 / 動画）
+- [pierre3/line-openapi-dotnet](https://github.com/pierre3/line-openapi-dotnet) (`Line.OpenApi.Bot`)
+- [Semantic Kernel](https://github.com/microsoft/semantic-kernel) (Hugging Face connector)
+- Hugging Face Inference Providers (image / video)
 
-## ドキュメント
-- 仕様: [`docs/specs/01-line-hf-bot.md`](docs/specs/01-line-hf-bot.md)
-- レビュー記録: [`docs/reviews/`](docs/reviews/)
-- 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
+## Documentation
+- Spec: [`docs/specs/01-line-hf-bot.md`](docs/specs/01-line-hf-bot.md)
+- Review records: [`docs/reviews/`](docs/reviews/)
+- Developer guide: [`CLAUDE.md`](CLAUDE.md)
 
-## ライセンス
-未定（追って設定）。
+## License
+Not decided yet.

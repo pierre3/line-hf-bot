@@ -1,6 +1,6 @@
 namespace LineHfBot.Queue;
 
-/// <summary>処理種別。ユーザー入力（コマンド/通常テキスト）から判定する。</summary>
+/// <summary>Kind of work, decided from the user's input (command or plain text).</summary>
 public enum WorkKind
 {
     Chat,
@@ -10,12 +10,12 @@ public enum WorkKind
     Help,
 }
 
-/// <summary>バックグラウンド処理1件分。Webhook イベントから生成される。</summary>
-/// <param name="Kind">処理種別</param>
-/// <param name="UserId">送信元 LINE userId</param>
-/// <param name="ReplyToken">即時 ack 用の reply トークン（短命・一回）</param>
-/// <param name="Text">プロンプト本文（コマンド接頭辞を除去済み）</param>
-/// <param name="WebhookEventId">冪等性判定用の一意 ID</param>
+/// <summary>A single unit of background work, built from a webhook event.</summary>
+/// <param name="Kind">Work kind.</param>
+/// <param name="UserId">Sender's LINE user id.</param>
+/// <param name="ReplyToken">Reply token for the immediate ack (short-lived, single use).</param>
+/// <param name="Text">Prompt text (command prefix already stripped).</param>
+/// <param name="WebhookEventId">Unique id used for idempotency.</param>
 public sealed record WorkItem(
     WorkKind Kind,
     string UserId,

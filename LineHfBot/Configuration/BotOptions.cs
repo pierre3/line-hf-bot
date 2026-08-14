@@ -1,6 +1,6 @@
 namespace LineHfBot.Configuration;
 
-/// <summary>LINE Messaging API の資格情報（section: "Line"）。秘密情報のため設定/環境変数で与える。</summary>
+/// <summary>LINE Messaging API credentials (section: "Line"). Secret; supply via configuration/environment.</summary>
 public sealed class LineOptions
 {
     public const string Section = "Line";
@@ -8,7 +8,7 @@ public sealed class LineOptions
     public string ChannelAccessToken { get; set; } = "";
 }
 
-/// <summary>Hugging Face の設定（section: "HuggingFace"）。</summary>
+/// <summary>Hugging Face settings (section: "HuggingFace").</summary>
 public sealed class HuggingFaceOptions
 {
     public const string Section = "HuggingFace";
@@ -21,35 +21,35 @@ public sealed class HuggingFaceOptions
     public int VideoTimeoutSeconds { get; set; } = 300;
 }
 
-/// <summary>アプリ全体の設定（section: "App"）。</summary>
+/// <summary>Application-wide settings (section: "App").</summary>
 public sealed class AppOptions
 {
     public const string Section = "App";
 
-    /// <summary>生成メディアの公開ベース URL。LINE は画像/動画に HTTPS URL を要求するため https 必須。</summary>
+    /// <summary>Public base URL for generated media. LINE requires HTTPS URLs for images/videos, so this must be https.</summary>
     public string PublicBaseUrl { get; set; } = "";
 
-    /// <summary>生成メディアのメモリ内 TTL（分）。</summary>
+    /// <summary>In-memory TTL (minutes) for generated media.</summary>
     public int MediaTtlMinutes { get; set; } = 10;
 }
 
-/// <summary>バックグラウンドキューの設定（section: "Queue"）。</summary>
+/// <summary>Background queue settings (section: "Queue").</summary>
 public sealed class QueueOptions
 {
     public const string Section = "Queue";
 
-    /// <summary>BoundedChannel の容量。満杯時は drop してユーザーへ混雑通知。</summary>
+    /// <summary>BoundedChannel capacity. When full, items are dropped and the user is told the bot is busy.</summary>
     public int Capacity { get; set; } = 100;
 
-    /// <summary>並列 worker 数。head-of-line blocking を緩和しつつ HF 同時負荷を抑制。</summary>
+    /// <summary>Number of parallel workers. Reduces head-of-line blocking while limiting concurrent load on HF.</summary>
     public int Workers { get; set; } = 2;
 }
 
-/// <summary>チャットの設定（section: "Chat"）。</summary>
+/// <summary>Chat settings (section: "Chat").</summary>
 public sealed class ChatOptions
 {
     public const string Section = "Chat";
 
-    /// <summary>ユーザー毎に保持する会話の最大往復数。</summary>
+    /// <summary>Maximum number of conversation turns kept per user.</summary>
     public int MaxHistory { get; set; } = 20;
 }

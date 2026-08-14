@@ -4,9 +4,9 @@ using Microsoft.Extensions.Options;
 namespace LineHfBot.Queue;
 
 /// <summary>
-/// キューを消費するバックグラウンドサービス。設定数の worker を並列に走らせ、
-/// head-of-line blocking を緩和しつつ HF への同時負荷を抑える。
-/// 各 work item ごとに DI スコープを生成し、例外は1件単位で隔離して worker を止めない。
+/// Background service that consumes the queue. It runs the configured number of workers in parallel
+/// to reduce head-of-line blocking while limiting concurrent load on HF.
+/// Each item runs in its own DI scope, and exceptions are isolated per item so a worker never stops.
 /// </summary>
 public sealed class GenerationWorker(
     IWorkQueue queue,
@@ -17,7 +17,7 @@ public sealed class GenerationWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var workers = Math.Max(1, options.Value.Workers);
-        logger.LogInformation("GenerationWorker 開始: worker数={Workers}", workers);
+        logger.LogInformation("GenerationWorker started: workers={Workers}", workers);
 
         var tasks = Enumerable.Range(0, workers)
             .Select(id => RunWorkerAsync(id, stoppingToken))
@@ -34,7 +34,7 @@ public sealed class GenerationWorker(
             {
                 try
                 {
-                    // work item ごとにスコープを生成（scoped サービスを安全に利用するため）。
+                    // Create a scope per item so scoped services can be used safely.
                     using var scope = scopeFactory.CreateScope();
                     var processor = scope.ServiceProvider.GetRequiredService<IWorkProcessor>();
                     await processor.ProcessAsync(item, stoppingToken);
@@ -45,19 +45,19 @@ public sealed class GenerationWorker(
                 }
                 catch (Exception ex)
                 {
-                    // 例外隔離: 1件の失敗で worker ループを止めない。
+                    // Isolate failures: one failing item must not stop the worker loop.
                     logger.LogError(ex,
-                        "処理に失敗しました worker={WorkerId} kind={Kind} user={User}",
+                        "Processing failed worker={WorkerId} kind={Kind} user={User}",
                         workerId, item.Kind, item.UserId);
-                    // TODO(messaging 増分): ユーザーへ失敗を Push 通知する。
+                    // TODO(messaging increment): push a failure notice to the user.
                 }
             }
         }
         catch (OperationCanceledException)
         {
-            // シャットダウン時の正常終了。
+            // Normal exit on shutdown.
         }
 
-        logger.LogInformation("worker 終了: worker={WorkerId}", workerId);
+        logger.LogInformation("Worker stopped: worker={WorkerId}", workerId);
     }
 }

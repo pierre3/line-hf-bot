@@ -5,24 +5,24 @@ using LineHfBot.Configuration;
 using LineHfBot.Messaging;
 using LineHfBot.Queue;
 
-// Windows コンソールでの日本語ログ文字化けを防ぐため UTF-8 に固定。
-// コンソールが無い/リダイレクト時に失敗し得るため防御的に握る。
+// Force UTF-8 console output so Japanese log text is not garbled on Windows.
+// Setting this can fail when there is no console or output is redirected, so guard it.
 try { Console.OutputEncoding = Encoding.UTF8; } catch { /* ignore */ }
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 設定 (Options) ---
+// --- Options ---
 builder.Services.Configure<LineOptions>(builder.Configuration.GetSection(LineOptions.Section));
 builder.Services.Configure<HuggingFaceOptions>(builder.Configuration.GetSection(HuggingFaceOptions.Section));
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.Section));
 builder.Services.Configure<QueueOptions>(builder.Configuration.GetSection(QueueOptions.Section));
 builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection(ChatOptions.Section));
 
-// --- LINE Webhook パーサ (署名検証) ---
+// --- LINE webhook parser (signature verification) ---
 builder.Services.AddLineWebhook(o =>
     o.ChannelSecret = builder.Configuration[$"{LineOptions.Section}:{nameof(LineOptions.ChannelSecret)}"] ?? "");
 
-// --- バックグラウンドキュー ---
+// --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
 builder.Services.AddScoped<IWorkProcessor, StubWorkProcessor>();
 builder.Services.AddSingleton<MessageDispatcher>();
@@ -30,10 +30,11 @@ builder.Services.AddHostedService<GenerationWorker>();
 
 var app = builder.Build();
 
-// ヘルスチェック
+// Health check.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// LINE Webhook: 署名検証 → 即 2xx 応答（重い処理は後続増分でキューへ）
+// LINE webhook: verify the signature, then return 2xx immediately.
+// Heavy work is handed off to the background queue (LINE recommends async processing).
 app.MapPost("/webhook", async (
     HttpRequest request,
     WebhookRequestParser parser,
@@ -42,7 +43,7 @@ app.MapPost("/webhook", async (
 {
     var logger = loggerFactory.CreateLogger("Webhook");
 
-    // 署名は生ボディに対して検証する必要があるため、生バイトを読む。
+    // The signature is computed over the raw body, so read the bytes as-is.
     using var ms = new MemoryStream();
     await request.Body.CopyToAsync(ms);
     var body = ms.ToArray();
@@ -52,20 +53,20 @@ app.MapPost("/webhook", async (
     {
         var callback = await parser.ParseAsync(body, signature);
 
-        // イベントを解析してキューへ enqueue（重い処理は worker が担当）。
+        // Parse events and enqueue them; the worker does the heavy lifting.
         dispatcher.Dispatch(callback);
 
-        // 生成完了を待たず即座に 2xx を返す（LINE 推奨の非同期処理）。
+        // Return 2xx right away without waiting for generation to finish.
         return Results.Ok();
     }
     catch (WebhookSignatureException)
     {
-        logger.LogWarning("Webhook 署名検証に失敗しました。");
+        logger.LogWarning("Webhook signature verification failed.");
         return Results.Unauthorized();
     }
     catch (WebhookPayloadException ex)
     {
-        logger.LogWarning(ex, "Webhook ペイロードの解析に失敗しました。");
+        logger.LogWarning(ex, "Failed to parse webhook payload.");
         return Results.BadRequest();
     }
 });

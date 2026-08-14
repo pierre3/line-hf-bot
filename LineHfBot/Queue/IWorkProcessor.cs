@@ -1,8 +1,8 @@
 namespace LineHfBot.Queue;
 
 /// <summary>
-/// キューから取り出した1件を実処理する。scoped で解決され、work item ごとに新しいスコープで動く。
-/// 現段階はスタブ実装。以降の増分で chat / image / video の処理と Push 送信に差し替える。
+/// Processes one dequeued item. Resolved as scoped, so each item runs in its own DI scope.
+/// Currently a stub; later increments replace it with chat / image / video handling and push delivery.
 /// </summary>
 public interface IWorkProcessor
 {
