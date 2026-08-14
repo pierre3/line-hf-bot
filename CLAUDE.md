@@ -22,8 +22,14 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
 
 ## 設定（すべて環境変数 / appsettings）
-`Line__ChannelSecret`, `Line__ChannelAccessToken`, `HuggingFace__ApiKey`,
-`HuggingFace__ChatModel` / `ImageModel` / `VideoModel`, `PublicBaseUrl`, `MediaTtlMinutes`
+環境変数は section 区切りを `__` で表す（例: section `App` の `PublicBaseUrl` → `App__PublicBaseUrl`）。
+- `Line__ChannelSecret`, `Line__ChannelAccessToken`
+- `HuggingFace__ApiKey`, `HuggingFace__ChatModel` / `ImageModel` / `VideoModel`,
+  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
+- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10)
+- `Queue__Capacity`(100), `Queue__Workers`(2)
+- `Chat__MaxHistory`(20)
+
 ※ トークン類は**絶対にコミットしない**（`.env` は `.gitignore`、`.env.example` のみ管理）。
 
 ## よく使うコマンド

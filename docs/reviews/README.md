@@ -35,4 +35,7 @@ Verdict: PASS | FAIL
 
 ## 記録インデックス
 <!-- 新しい判定を上に追記する -->
+- 2026-08-14 **PASS** ドキュメントレビュー（phase2-scaffold）— [`04-doc-phase2-scaffold.md`](04-doc-phase2-scaffold.md)（初回 FAIL→設定キー整合を修正して PASS）
+- 2026-08-14 **PASS** セキュリティレビュー（phase2-scaffold）— [`03-security-phase2-scaffold.md`](03-security-phase2-scaffold.md)（Critical/High/Medium なし、脆弱パッケージ0）
+- 2026-08-14 **PASS** 実装レビュー（phase2-scaffold）— [`02-impl-phase2-scaffold.md`](02-impl-phase2-scaffold.md)（Blocker/Major なし、Minor 4）
 - 2026-08-14 **PASS** 仕様レビュー — [`01-spec-line-hf-bot.md`](01-spec-line-hf-bot.md)（Major #1 タイムアウトを仕様反映）
