@@ -1,9 +1,14 @@
 using System.Text;
+using Line.OpenApi.Messaging.DependencyInjection;
 using Line.OpenApi.Messaging.Webhook;
 using Line.OpenApi.Messaging.Webhook.DependencyInjection;
+using LineHfBot.Ai;
+using LineHfBot.Chat;
 using LineHfBot.Configuration;
+using LineHfBot.Line;
 using LineHfBot.Messaging;
 using LineHfBot.Queue;
+using Microsoft.SemanticKernel;
 
 // Force UTF-8 console output so Japanese log text is not garbled on Windows.
 // Setting this can fail when there is no console or output is redirected, so guard it.
@@ -11,20 +16,32 @@ try { Console.OutputEncoding = Encoding.UTF8; } catch { /* ignore */ }
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Options ---
-builder.Services.Configure<LineOptions>(builder.Configuration.GetSection(LineOptions.Section));
-builder.Services.Configure<HuggingFaceOptions>(builder.Configuration.GetSection(HuggingFaceOptions.Section));
-builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.Section));
-builder.Services.Configure<QueueOptions>(builder.Configuration.GetSection(QueueOptions.Section));
-builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection(ChatOptions.Section));
+// --- Options (validated at startup) ---
+builder.Services.AddBotOptions(builder.Configuration);
 
 // --- LINE webhook parser (signature verification) ---
 builder.Services.AddLineWebhook(o =>
     o.ChannelSecret = builder.Configuration[$"{LineOptions.Section}:{nameof(LineOptions.ChannelSecret)}"] ?? "");
 
+// --- LINE messaging client (reply / push) ---
+builder.Services.AddLineMessaging(o =>
+    o.ChannelAccessToken = builder.Configuration[$"{LineOptions.Section}:{nameof(LineOptions.ChannelAccessToken)}"] ?? "");
+
+// --- Semantic Kernel chat completion via the Hugging Face connector ---
+var hf = builder.Configuration.GetSection(HuggingFaceOptions.Section).Get<HuggingFaceOptions>() ?? new HuggingFaceOptions();
+builder.Services.AddHuggingFaceChatCompletion(
+    model: hf.ChatModel,
+    endpoint: string.IsNullOrWhiteSpace(hf.ChatEndpoint) ? null : new Uri(hf.ChatEndpoint),
+    apiKey: hf.ApiKey);
+
+// --- App services ---
+builder.Services.AddSingleton<ChatHistoryStore>();
+builder.Services.AddSingleton<IChatService, HuggingFaceChatService>();
+builder.Services.AddSingleton<ILineMessenger, LineMessenger>();
+
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
-builder.Services.AddScoped<IWorkProcessor, StubWorkProcessor>();
+builder.Services.AddScoped<IWorkProcessor, ChatWorkProcessor>();
 builder.Services.AddSingleton<MessageDispatcher>();
 builder.Services.AddHostedService<GenerationWorker>();
 
@@ -54,7 +71,7 @@ app.MapPost("/webhook", async (
         var callback = await parser.ParseAsync(body, signature);
 
         // Parse events and enqueue them; the worker does the heavy lifting.
-        dispatcher.Dispatch(callback);
+        await dispatcher.DispatchAsync(callback, request.HttpContext.RequestAborted);
 
         // Return 2xx right away without waiting for generation to finish.
         return Results.Ok();

@@ -16,6 +16,12 @@ public sealed class HuggingFaceOptions
     public string ChatModel { get; set; } = "";
     public string ImageModel { get; set; } = "";
     public string VideoModel { get; set; } = "";
+
+    /// <summary>
+    /// Chat completion endpoint. Defaults to the Hugging Face OpenAI-compatible router.
+    /// Adjust if your model/provider needs a different base URL.
+    /// </summary>
+    public string ChatEndpoint { get; set; } = "https://router.huggingface.co/v1";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;

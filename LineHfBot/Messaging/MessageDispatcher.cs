@@ -1,16 +1,18 @@
+using LineHfBot.Line;
 using LineHfBot.Queue;
+using LineHfBot.Text;
 using Line.OpenApi.Messaging.Webhook.Generated.Models;
 
 namespace LineHfBot.Messaging;
 
 /// <summary>
 /// Parses webhook events, detects the command, and enqueues work onto <see cref="IWorkQueue"/>.
-/// v1 handles user-originated text messages only. When the queue is full, the item is dropped and logged
-/// (push notification will be added in the messaging increment).
+/// v1 handles user-originated text messages only. When the queue is full, the item is dropped and
+/// the user is told (best-effort) that the bot is busy.
 /// </summary>
-public sealed class MessageDispatcher(IWorkQueue queue, ILogger<MessageDispatcher> logger)
+public sealed class MessageDispatcher(IWorkQueue queue, ILineMessenger messenger, ILogger<MessageDispatcher> logger)
 {
-    public void Dispatch(CallbackRequest callback)
+    public async Task DispatchAsync(CallbackRequest callback, CancellationToken cancellationToken)
     {
         foreach (var ev in callback.Events ?? [])
         {
@@ -33,23 +35,27 @@ public sealed class MessageDispatcher(IWorkQueue queue, ILogger<MessageDispatche
             }
             else
             {
-                // Full -> drop. The spec calls for a "bot is busy" reply (added in the messaging increment).
+                // Full -> drop. Notify the user now, while the reply token is still usable.
                 logger.LogWarning("Queue full, dropped: kind={Kind} user={User}", kind, userId);
+                if (!string.IsNullOrEmpty(replyToken))
+                {
+                    await messenger.TryReplyTextAsync(replyToken, UserMessages.Busy, cancellationToken);
+                }
             }
         }
     }
 
-    /// <summary>Interpret a leading command prefix and split into kind and body (prefix stripped).</summary>
+    /// <summary>Interpret a leading command prefix and split into kind and body (prefix stripped, trimmed).</summary>
     internal static (WorkKind Kind, string Body) ParseCommand(string raw)
     {
-        var t = raw.TrimStart();
+        var t = raw.Trim();
 
         if (TryPrefix(t, "/image", out var imgArg)) return (WorkKind.Image, imgArg);
         if (TryPrefix(t, "/video", out var vidArg)) return (WorkKind.Video, vidArg);
         if (t.Equals("/reset", StringComparison.OrdinalIgnoreCase)) return (WorkKind.Reset, "");
         if (t.Equals("/help", StringComparison.OrdinalIgnoreCase)) return (WorkKind.Help, "");
 
-        return (WorkKind.Chat, raw);
+        return (WorkKind.Chat, t);
     }
 
     private static bool TryPrefix(string text, string command, out string arg)
