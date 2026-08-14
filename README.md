@@ -39,6 +39,8 @@ cp .env.example .env
 ```bash
 docker compose up --build      # listens on :8080
 ```
+> If port 8080 is already in use, set `HOST_PORT` (e.g. `HOST_PORT=8081`) in `.env` and use that same port for the tunnel below.
+
 For local development instead: `dotnet run --project LineHfBot --urls http://localhost:8080` and use `dotnet user-secrets` for the values (the `--urls` keeps the port at 8080 to match the tunnel step below).
 
 ### 3. Expose with a tunnel

@@ -39,6 +39,8 @@ cp .env.example .env
 ```bash
 docker compose up --build      # :8080 で待ち受け
 ```
+> 8080 が使用中なら `.env` に `HOST_PORT`（例 `HOST_PORT=8081`）を設定し、下のトンネルも同じポートにします。
+
 ローカル開発なら: `dotnet run --project LineHfBot --urls http://localhost:8080`（値は `dotnet user-secrets` で設定。`--urls` で下のトンネル手順と同じ 8080 に揃えます）。
 
 ### 3. トンネルで公開
