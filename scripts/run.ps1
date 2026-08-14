@@ -76,6 +76,13 @@ function Get-TunnelUrl([string]$Name, [string]$HostPort) {
     return "https://$($parts[0])-$HostPort.$($parts[1]).devtunnels.ms"
 }
 
+function Test-TunnelHosted([string]$Name) {
+    $json = (& devtunnel show $Name --json 2>$null | Out-String)
+    if (-not $json) { return $false }
+    try { $obj = $json | ConvertFrom-Json } catch { return $false }
+    return ([int]$obj.tunnel.hostConnections) -gt 0
+}
+
 # 1. Trust host root CAs (corporate TLS-inspecting proxy). No-op on normal networks.
 $certDir = Join-Path $root 'certs'
 $haveCerts = @(Get-ChildItem (Join-Path $certDir '*.crt') -ErrorAction SilentlyContinue).Count -gt 0
@@ -120,12 +127,18 @@ if ($StartTunnel) {
     if (-not $TunnelUrl) { throw "Could not determine the tunnel URL. Check: devtunnel show $TunnelName" }
     Write-Host "Tunnel URL: $TunnelUrl"
 
-    if (-not (Get-Process devtunnel -ErrorAction SilentlyContinue)) {
+    if (Test-TunnelHosted $TunnelName) {
+        Write-Host "Tunnel '$TunnelName' is already hosted."
+    } else {
         Write-Host 'Starting the tunnel host in the background ...'
         Start-Process devtunnel -ArgumentList 'host', $TunnelName -WindowStyle Hidden
-        Start-Sleep -Seconds 3
-    } else {
-        Write-Host 'A devtunnel process is already running; assuming the tunnel is hosted.'
+        $hosted = $false
+        for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 2
+            if (Test-TunnelHosted $TunnelName) { $hosted = $true; break }
+        }
+        if ($hosted) { Write-Host 'Tunnel host is up.' }
+        else { Write-Warning "Tunnel host did not come up. Try manually: devtunnel host $TunnelName" }
     }
 }
 
