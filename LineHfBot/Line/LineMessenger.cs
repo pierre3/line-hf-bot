@@ -23,23 +23,50 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
             await client.Api.V2.Bot.Message.Reply.PostAsync(new ReplyMessageRequest
             {
                 ReplyToken = replyToken,
-                Messages = [new TextMessage { Text = text }],
+                Messages = [new TextMessage { Type = "text", Text = text }],
             }, cancellationToken: cancellationToken);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Reply failed; will fall back to push.");
+            logger.LogWarning("Reply failed ({Detail}); will fall back to push.", DescribeLineError(ex));
             return false;
         }
     }
 
     public async Task PushTextAsync(string userId, string text, CancellationToken cancellationToken)
     {
-        await client.Api.V2.Bot.Message.Push.PostAsync(new PushMessageRequest
+        try
         {
-            To = userId,
-            Messages = [new TextMessage { Text = text }],
-        }, cancellationToken: cancellationToken);
+            await client.Api.V2.Bot.Message.Push.PostAsync(new PushMessageRequest
+            {
+                To = userId,
+                Messages = [new TextMessage { Type = "text", Text = text }],
+            }, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Push failed ({Detail}).", DescribeLineError(ex));
+            throw;
+        }
+    }
+
+    // Extract LINE's validation details (message + per-property errors) from the Kiota error object.
+    // Uses reflection so it works regardless of the exact generated error-type shape.
+    private static string DescribeLineError(Exception ex)
+    {
+        var parts = new List<string> { $"{ex.GetType().Name}: {ex.Message}" };
+        if (ex.GetType().GetProperty("Details")?.GetValue(ex) is System.Collections.IEnumerable details)
+        {
+            foreach (var d in details)
+            {
+                if (d is null) continue;
+                var dt = d.GetType();
+                var property = dt.GetProperty("Property")?.GetValue(d);
+                var message = dt.GetProperty("Message")?.GetValue(d);
+                parts.Add($"[{property}] {message}");
+            }
+        }
+        return string.Join(" | ", parts);
     }
 }
