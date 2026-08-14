@@ -64,11 +64,16 @@ function Get-EnvValue([string]$Path, [string]$Key) {
 }
 
 function Get-TunnelUrl([string]$Name, [string]$HostPort) {
-    $out = (& devtunnel show $Name 2>&1 | Out-String)
-    $urls = [regex]::Matches($out, 'https://[a-zA-Z0-9\-\.]+\.devtunnels\.ms') | ForEach-Object { $_.Value } | Select-Object -Unique
-    $perPort = $urls | Where-Object { $_ -match "-$HostPort\." } | Select-Object -First 1
-    if ($perPort) { return $perPort }
-    return ($urls | Select-Object -First 1)
+    # devtunnel show doesn't print the URL, but tunnelId is "<name>.<cluster>" (e.g. line-hf-bot.jpe1)
+    # and the per-port forwarding URL is https://<name>-<port>.<cluster>.devtunnels.ms
+    $json = (& devtunnel show $Name --json 2>$null | Out-String)
+    if (-not $json) { return $null }
+    try { $obj = $json | ConvertFrom-Json } catch { return $null }
+    $tunnelId = $obj.tunnel.tunnelId
+    if (-not $tunnelId) { return $null }
+    $parts = $tunnelId -split '\.', 2
+    if ($parts.Count -lt 2) { return $null }
+    return "https://$($parts[0])-$HostPort.$($parts[1]).devtunnels.ms"
 }
 
 # 1. Trust host root CAs (corporate TLS-inspecting proxy). No-op on normal networks.
