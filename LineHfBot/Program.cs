@@ -2,6 +2,8 @@ using System.Text;
 using Line.OpenApi.Messaging.Webhook;
 using Line.OpenApi.Messaging.Webhook.DependencyInjection;
 using LineHfBot.Configuration;
+using LineHfBot.Messaging;
+using LineHfBot.Queue;
 
 // Windows コンソールでの日本語ログ文字化けを防ぐため UTF-8 に固定。
 // コンソールが無い/リダイレクト時に失敗し得るため防御的に握る。
@@ -20,13 +22,23 @@ builder.Services.Configure<ChatOptions>(builder.Configuration.GetSection(ChatOpt
 builder.Services.AddLineWebhook(o =>
     o.ChannelSecret = builder.Configuration[$"{LineOptions.Section}:{nameof(LineOptions.ChannelSecret)}"] ?? "");
 
+// --- バックグラウンドキュー ---
+builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
+builder.Services.AddScoped<IWorkProcessor, StubWorkProcessor>();
+builder.Services.AddSingleton<MessageDispatcher>();
+builder.Services.AddHostedService<GenerationWorker>();
+
 var app = builder.Build();
 
 // ヘルスチェック
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // LINE Webhook: 署名検証 → 即 2xx 応答（重い処理は後続増分でキューへ）
-app.MapPost("/webhook", async (HttpRequest request, WebhookRequestParser parser, ILoggerFactory loggerFactory) =>
+app.MapPost("/webhook", async (
+    HttpRequest request,
+    WebhookRequestParser parser,
+    MessageDispatcher dispatcher,
+    ILoggerFactory loggerFactory) =>
 {
     var logger = loggerFactory.CreateLogger("Webhook");
 
@@ -40,11 +52,8 @@ app.MapPost("/webhook", async (HttpRequest request, WebhookRequestParser parser,
     {
         var callback = await parser.ParseAsync(body, signature);
 
-        // TODO(キュー増分): イベントをバックグラウンドキューへ enqueue する。現時点はログのみ。
-        foreach (var ev in callback.Events ?? [])
-        {
-            logger.LogInformation("受信イベント: {EventType}", ev.GetType().Name);
-        }
+        // イベントを解析してキューへ enqueue（重い処理は worker が担当）。
+        dispatcher.Dispatch(callback);
 
         // 生成完了を待たず即座に 2xx を返す（LINE 推奨の非同期処理）。
         return Results.Ok();
