@@ -33,7 +33,7 @@ public sealed class HuggingFaceVideoService(HttpClient http, IOptions<HuggingFac
         cts.CancelAfter(TimeSpan.FromSeconds(Math.Max(5, opt.VideoTimeoutSeconds)));
 
         using var response = await http.SendAsync(request, cts.Token);
-        response.EnsureSuccessStatusCode();
+        await HfHttp.EnsureSuccessAsync(response, cts.Token);
 
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
 

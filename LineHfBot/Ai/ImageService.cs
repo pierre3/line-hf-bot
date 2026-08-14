@@ -31,7 +31,7 @@ public sealed class HuggingFaceImageService(HttpClient http, IOptions<HuggingFac
         cts.CancelAfter(TimeSpan.FromSeconds(Math.Max(5, opt.ImageTimeoutSeconds)));
 
         using var response = await http.SendAsync(request, cts.Token);
-        response.EnsureSuccessStatusCode();
+        await HfHttp.EnsureSuccessAsync(response, cts.Token);
 
         var bytes = await response.Content.ReadAsByteArrayAsync(cts.Token);
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
