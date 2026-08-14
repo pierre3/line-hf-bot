@@ -88,4 +88,12 @@ app.MapPost("/webhook", async (
     }
 });
 
+// Development-only diagnostic: exercise the Hugging Face chat path in isolation (no LINE).
+// Never mapped in Production. Example: GET /dev/chat?message=hello
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/dev/chat", async (string message, IChatService chat, CancellationToken ct) =>
+        Results.Text(await chat.CompleteAsync("dev-user", message, ct)));
+}
+
 app.Run();
