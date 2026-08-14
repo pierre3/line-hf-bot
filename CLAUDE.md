@@ -22,8 +22,17 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
 
 ## 設定（すべて環境変数 / appsettings）
-`Line__ChannelSecret`, `Line__ChannelAccessToken`, `HuggingFace__ApiKey`,
-`HuggingFace__ChatModel` / `ImageModel` / `VideoModel`, `PublicBaseUrl`, `MediaTtlMinutes`
+環境変数は section 区切りを `__` で表す（例: section `App` の `PublicBaseUrl` → `App__PublicBaseUrl`）。
+- `Line__ChannelSecret`, `Line__ChannelAccessToken`
+- `HuggingFace__ApiKey`, `HuggingFace__ChatModel` / `ImageModel` / `VideoModel`,
+  `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
+  `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
+  `HuggingFace__VideoEndpoint`(text-to-video。`{model}` を VideoModel で置換。プロバイダ依存。バイト or JSON(URL) 両対応),
+  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
+- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ)
+- `Queue__Capacity`(100), `Queue__Workers`(2)
+- `Chat__MaxHistory`(20)
+
 ※ トークン類は**絶対にコミットしない**（`.env` は `.gitignore`、`.env.example` のみ管理）。
 
 ## よく使うコマンド
@@ -52,3 +61,9 @@ docker build -t line-hf-bot . / docker compose up
 - モダン C#（primary constructor、collection expression、`IHttpClientFactory`、`TimeProvider`）を用いる。
 - 外部 I/O（LINE / HF）失敗はユーザーに通知し、握りつぶさない。
 - 秘密情報をログ・コミットに出さない。
+
+### 言語ルール
+- **コメント・ログは英語**（開発者/運用向け）。**エンドユーザー向けの文言（LINE 返信など）は日本語**。
+- **公開ドキュメントは英語を既定**とし、**日本語版も用意**（`README.md`＝英語 / `README.ja.md`＝日本語）。
+  `docs/specs`・`docs/reviews` は内部作業ドキュメントとして日本語で運用。
+- 日本語は翻訳調・AI 生成臭を避け、平易で自然な文章にする。

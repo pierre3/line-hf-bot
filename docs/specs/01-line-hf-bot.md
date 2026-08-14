@@ -67,7 +67,7 @@ POST /webhook → 署名検証 → (有効なら) enqueue → 即 2xx 応答
 
 ## 5. 設定（すべて環境変数 / appsettings）
 `Line__ChannelSecret`, `Line__ChannelAccessToken`, `HuggingFace__ApiKey`,
-`HuggingFace__ChatModel` / `ImageModel` / `VideoModel`, `PublicBaseUrl`, `MediaTtlMinutes`,
+`HuggingFace__ChatModel` / `ImageModel` / `VideoModel`, `HuggingFace__ChatEndpoint`, `App__PublicBaseUrl`, `App__MediaTtlMinutes`,
 `Queue__Capacity`(既定100), `Queue__Workers`(既定2), `Chat__MaxHistory`(既定20),
 `HuggingFace__ChatTimeoutSeconds`(既定60) / `ImageTimeoutSeconds`(既定120) / `VideoTimeoutSeconds`(既定300)。
 - 秘密情報はコミット禁止（`.env` は gitignore、`.env.example` のみ管理）。

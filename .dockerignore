@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.claude/
+docs/
+*.user
+.env
+.env.*
+!.env.example
+README*.md
+LICENSE

@@ -1,0 +1,11 @@
+services:
+  line-hf-bot:
+    build: .
+    image: line-hf-bot
+    container_name: line-hf-bot
+    ports:
+      # host:container — override the host port via HOST_PORT in .env if 8080 is taken
+      - "${HOST_PORT:-8080}:8080"
+    env_file:
+      - .env
+    restart: unless-stopped

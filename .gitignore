@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.example
+
+# CA certs dropped in for corporate proxy builds (keep the folder + README)
+certs/*.crt
+certs/*.pem
 appsettings.*.local.json
 **/secrets.json
 .claude/settings.local.json
