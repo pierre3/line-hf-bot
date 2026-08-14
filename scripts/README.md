@@ -1,24 +1,22 @@
 # scripts/
 
-Helper scripts (PowerShell 7+) that automate the containerized setup and verification.
+`run.ps1` (PowerShell 7+) automates the containerized setup and verification in one command.
+It trusts the host root CAs (for a corporate proxy), creates `.env` if missing, builds/runs the
+container, health-checks it, and — when a tunnel URL is given — sets and verifies the LINE webhook.
 
 ## English
 
 Prerequisites: Docker, PowerShell 7+, a tunnel tool (e.g. `devtunnel`), a filled-in `.env`.
 
-1. **Build, run, health-check** (also trusts host root CAs for a corporate proxy, creates `.env` if missing):
-   ```powershell
-   ./scripts/run.ps1            # or -Rebuild after code/cert changes
-   ```
-2. **Expose the port** (interactive — leave it running):
-   ```powershell
-   devtunnel host -p 8081 --allow-anonymous     # use your HOST_PORT
-   ```
-3. **Set & verify the webhook** (updates `App__PublicBaseUrl`, recreates the container, runs the `line` CLI):
-   ```powershell
-   ./scripts/set-webhook.ps1 -TunnelUrl https://<your-tunnel>
-   ```
-4. Message your bot on LINE (chat, `/image ...`).
+Start the tunnel first (its URL is known immediately), then run everything in one command:
+```powershell
+devtunnel host -p 8081 --allow-anonymous
+./scripts/run.ps1 -Port 8081 -TunnelUrl https://<your-tunnel> -Rebuild
+```
+Then message your bot on LINE (chat, `/image ...`).
+
+Just build/run/health-check (set the webhook later): `./scripts/run.ps1`
+Parameters: `-Port <n>` (host port), `-TunnelUrl <https://...>`, `-Rebuild`, `-ExportCerts`.
 
 Logs: `docker compose logs -f` — Stop: `docker compose down`
 
@@ -26,18 +24,14 @@ Logs: `docker compose logs -f` — Stop: `docker compose down`
 
 前提: Docker、PowerShell 7+、トンネルツール（例: `devtunnel`）、記入済みの `.env`。
 
-1. **ビルド・起動・ヘルスチェック**（企業プロキシ用に host のルート CA も信頼、`.env` が無ければ作成）:
-   ```powershell
-   ./scripts/run.ps1            # コードや cert 変更後は -Rebuild
-   ```
-2. **ポートを公開**（対話的。起動したままにする）:
-   ```powershell
-   devtunnel host -p 8081 --allow-anonymous     # HOST_PORT に合わせる
-   ```
-3. **Webhook を設定・検証**（`App__PublicBaseUrl` を更新→コンテナ再作成→`line` CLI 実行）:
-   ```powershell
-   ./scripts/set-webhook.ps1 -TunnelUrl https://<トンネル>
-   ```
-4. LINE からボットに送信（チャット・`/image ...`）。
+トンネルを先に起動（URL はすぐ分かる）してから、1コマンドで一括実行:
+```powershell
+devtunnel host -p 8081 --allow-anonymous
+./scripts/run.ps1 -Port 8081 -TunnelUrl https://<トンネル> -Rebuild
+```
+あとは LINE からボットに送信（チャット・`/image ...`）。
+
+起動＆ヘルスチェックのみ（Webhook は後で設定）: `./scripts/run.ps1`
+引数: `-Port <番号>`（ホストポート）, `-TunnelUrl <https://...>`, `-Rebuild`, `-ExportCerts`。
 
 ログ: `docker compose logs -f` ／ 停止: `docker compose down`
