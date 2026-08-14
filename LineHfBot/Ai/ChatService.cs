@@ -1,5 +1,7 @@
 using LineHfBot.Chat;
+using LineHfBot.Configuration;
 using LineHfBot.Text;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace LineHfBot.Ai;
@@ -15,7 +17,8 @@ public interface IChatService
 /// </summary>
 public sealed class HuggingFaceChatService(
     IChatCompletionService chat,
-    ChatHistoryStore store) : IChatService
+    ChatHistoryStore store,
+    IOptions<HuggingFaceOptions> options) : IChatService
 {
     // Assistant persona. Product content shown indirectly to users, so kept in Japanese.
     private const string SystemPrompt = "あなたは親切で丁寧な日本語のアシスタントです。分かりやすく簡潔に答えてください。";
@@ -24,8 +27,21 @@ public sealed class HuggingFaceChatService(
     {
         var history = store.Build(userId, SystemPrompt, userText);
 
-        var result = await chat.GetChatMessageContentAsync(history, cancellationToken: cancellationToken);
-        var answer = result.Content ?? "";
+        // Bound the HF call so a slow/cold model does not tie up a worker indefinitely.
+        var timeout = Math.Max(5, options.Value.ChatTimeoutSeconds);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(timeout));
+
+        string answer;
+        try
+        {
+            var result = await chat.GetChatMessageContentAsync(history, cancellationToken: cts.Token);
+            answer = result.Content ?? "";
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return UserMessages.Timeout;
+        }
 
         if (string.IsNullOrWhiteSpace(answer))
         {

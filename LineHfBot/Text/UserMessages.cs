@@ -22,5 +22,7 @@ public static class UserMessages
 
     public const string EmptyAnswer = "うまく返事を作れませんでした。もう一度試してみてください。";
 
+    public const string Timeout = "時間がかかりすぎました。もう一度試してみてください。";
+
     public const string Error = "エラーが起きました。しばらくたってから、もう一度試してください。";
 }

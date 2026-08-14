@@ -35,6 +35,9 @@ Verdict: PASS | FAIL
 
 ## 記録インデックス
 <!-- 新しい判定を上に追記する -->
+- 2026-08-14 **PASS** ドキュメントレビュー（chat増分）— [`07-doc-chat.md`](07-doc-chat.md)（初回 FAIL→`ChatEndpoint` 記載を追記して PASS）
+- 2026-08-14 **PASS** セキュリティレビュー（chat増分）— [`06-security-chat.md`](06-security-chat.md)（Critical/High/Medium なし。worker タイムアウトを追加対応）
+- 2026-08-14 **PASS** 実装レビュー（chat増分）— [`05-impl-chat.md`](05-impl-chat.md)（Blocker/Major なし、Minor 3。worker タイムアウトを追加対応）
 - 2026-08-14 **PASS** ドキュメントレビュー（phase2-scaffold）— [`04-doc-phase2-scaffold.md`](04-doc-phase2-scaffold.md)（初回 FAIL→設定キー整合を修正して PASS）
 - 2026-08-14 **PASS** セキュリティレビュー（phase2-scaffold）— [`03-security-phase2-scaffold.md`](03-security-phase2-scaffold.md)（Critical/High/Medium なし、脆弱パッケージ0）
 - 2026-08-14 **PASS** 実装レビュー（phase2-scaffold）— [`02-impl-phase2-scaffold.md`](02-impl-phase2-scaffold.md)（Blocker/Major なし、Minor 4）
