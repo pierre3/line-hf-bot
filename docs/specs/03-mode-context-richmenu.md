@@ -56,6 +56,8 @@
 - ログ/コメントは英語のまま（[[language-and-docs-conventions]] 準拠）。ユーザー向け文言のみロケール切替。
 
 ## 3. 設定（追加）
+> ※ **3b の編集モデル/エンドポイント既定は後日 spec05 で fal-ai に変更**（`hf-inference` は image-to-image 非対応と判明したため）。下表の `Qwen/Qwen-Image-Edit` / `hf-inference/models/{model}` は当時の記録。**現行の既定は `docs/specs/05-image-edit-fal-provider.md` §4 を参照**。
+
 | キー | 既定 | 説明 |
 |---|---|---|
 | `App__Locale` | `en` | ユーザー向け文言＋リッチメニュー画像のロケール（en/ja） |

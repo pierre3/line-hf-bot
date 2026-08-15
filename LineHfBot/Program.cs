@@ -164,6 +164,24 @@ if (app.Environment.IsDevelopment())
         }
     });
 
+    // Dev-only: exercise the image-to-image edit path end-to-end. Generates a reference image via
+    // text-to-image, then edits it with the given instruction. Returns the edited bytes, or an error.
+    // Example: GET /dev/imageedit?prompt=make%20it%20night  (curl -o out.png)
+    app.MapGet("/dev/imageedit", async (
+        string? prompt, IImageService images, IImageEditService edit, CancellationToken ct) =>
+    {
+        try
+        {
+            var reference = await images.GenerateAsync("a simple daytime landscape photo", ct);
+            var media = await edit.GenerateAsync(reference.Bytes, prompt ?? "make it night", ct);
+            return Results.File(media.Bytes, media.ContentType);
+        }
+        catch (Exception ex)
+        {
+            return Results.Text($"ERROR {ex.GetType().Name}: {ex.Message}");
+        }
+    });
+
     // Dev-only: exercise the HF video path in isolation. Returns the video bytes, or an error string.
     // Example: GET /dev/video?prompt=a%20running%20cat  (curl -o out.mp4)
     app.MapGet("/dev/video", async (string prompt, IVideoService videos, CancellationToken ct) =>

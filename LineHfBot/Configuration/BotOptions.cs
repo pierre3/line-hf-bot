@@ -26,8 +26,12 @@ public sealed class HuggingFaceOptions
     public string ImageModel { get; set; } = "";
     public string VideoModel { get; set; } = "";
 
-    /// <summary>Image-to-image (edit) model. Provider-dependent; default is Qwen's instruction-following editor.</summary>
-    public string ImageEditModel { get; set; } = "Qwen/Qwen-Image-Edit";
+    /// <summary>
+    /// Image-to-image (edit) model, as a provider model id. Image-to-image is not served by hf-inference,
+    /// so this defaults to the fal-ai provider id for Qwen-Image-Edit. Change together with
+    /// <see cref="ImageEditEndpoint"/> to target a different provider.
+    /// </summary>
+    public string ImageEditModel { get; set; } = "fal-ai/qwen-image-edit";
 
     /// <summary>
     /// Chat completion base URL. Defaults to the Hugging Face router; the SK connector
@@ -51,11 +55,12 @@ public sealed class HuggingFaceOptions
     public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
 
     /// <summary>
-    /// Image-to-image (edit) endpoint template. "{model}" is replaced with <see cref="ImageEditModel"/>.
-    /// The reference image is sent as base64 in "inputs" with the edit instruction in "parameters.prompt".
-    /// Provider-dependent; response is raw bytes or JSON-with-URL (both handled like the image path).
+    /// Image-to-image (edit) submit endpoint template. "{model}" is replaced with <see cref="ImageEditModel"/>.
+    /// Defaults to the fal-ai async queue on the HF router: the service submits the job here, polls the
+    /// returned status URL, then reads the result image URL. Provider-dependent; changing provider means
+    /// changing this template, the model id, and possibly the request/response handling.
     /// </summary>
-    public string ImageEditEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+    public string ImageEditEndpoint { get; set; } = "https://router.huggingface.co/fal-ai/{model}?_subdomain=queue";
 
     /// <summary>
     /// Hosts allowed when re-fetching media from a provider-supplied URL (JSON-URL responses).

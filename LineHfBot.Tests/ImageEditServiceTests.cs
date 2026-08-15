@@ -15,17 +15,39 @@ public class ImageEditServiceTests
         Microsoft.Extensions.Options.Options.Create(new HuggingFaceOptions
         {
             ApiKey = "hf_test_token",
-            ImageEditModel = "Qwen/Qwen-Image-Edit",
-            ImageEditEndpoint = "https://router.huggingface.co/hf-inference/models/{model}",
+            ImageEditModel = "fal-ai/qwen-image-edit",
+            ImageEditEndpoint = "https://router.huggingface.co/fal-ai/{model}?_subdomain=queue",
             MediaRefetchAllowedHosts = "fal.media;replicate.delivery",
             ImageEditTimeoutSeconds = 30,
         });
 
-    // The img2img payload differs from text-to-image: base64 image in "inputs", instruction in "parameters.prompt".
-    [Fact]
-    public async Task Sends_base64_image_and_prompt_payload()
+    // fal returns queue.fal.run status/response URLs; a submit response fixture with a given result URL.
+    private static StubHttpMessageHandler FalHandler(string resultImageUrl) => new(req =>
     {
-        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Bytes(EditedImage, "image/png"));
+        if (req.Method == HttpMethod.Post)
+        {
+            return StubHttpMessageHandler.Json(
+                "{\"status\":\"IN_QUEUE\"," +
+                "\"status_url\":\"https://queue.fal.run/fal-ai/qwen-image-edit/requests/req-1/status\"," +
+                "\"response_url\":\"https://queue.fal.run/fal-ai/qwen-image-edit/requests/req-1\"}");
+        }
+        var path = req.RequestUri!.AbsolutePath;
+        if (path.EndsWith("/status", StringComparison.Ordinal))
+        {
+            return StubHttpMessageHandler.Json("{\"status\":\"COMPLETED\"}");
+        }
+        if (req.RequestUri!.Host.EndsWith("fal.media", StringComparison.Ordinal))
+        {
+            return StubHttpMessageHandler.Bytes(EditedImage, "image/png");
+        }
+        // The result endpoint.
+        return StubHttpMessageHandler.Json($"{{\"images\":[{{\"url\":\"{resultImageUrl}\"}}]}}");
+    });
+
+    [Fact]
+    public async Task Submit_posts_prompt_and_base64_data_uri_with_auth()
+    {
+        var handler = FalHandler("https://cdn.fal.media/edited.png");
         var svc = new HuggingFaceImageEditService(new HttpClient(handler), Options());
 
         await svc.GenerateAsync(ReferenceImage, "add a red hat", CancellationToken.None);
@@ -33,63 +55,69 @@ public class ImageEditServiceTests
         var post = handler.Seen[0];
         Assert.Equal(HttpMethod.Post, post.Method);
         Assert.True(post.HasAuthorization);
-        Assert.Equal("https://router.huggingface.co/hf-inference/models/Qwen/Qwen-Image-Edit", post.Uri!.ToString());
+        Assert.Equal("https://router.huggingface.co/fal-ai/fal-ai/qwen-image-edit?_subdomain=queue", post.Uri!.ToString());
 
         using var doc = JsonDocument.Parse(post.Body!);
         var root = doc.RootElement;
-        Assert.Equal(Convert.ToBase64String(ReferenceImage), root.GetProperty("inputs").GetString());
-        Assert.Equal("add a red hat", root.GetProperty("parameters").GetProperty("prompt").GetString());
+        Assert.Equal("add a red hat", root.GetProperty("prompt").GetString());
+        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(ReferenceImage)}", root.GetProperty("image_url").GetString());
+        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(ReferenceImage)}", root.GetProperty("image_urls")[0].GetString());
     }
 
+    // Poll + result URLs are rewritten to the router host (HF token only goes to router.huggingface.co),
+    // and the final fal.media image is re-fetched WITHOUT Authorization.
     [Fact]
-    public async Task Raw_bytes_response_returns_edited_image()
+    public async Task Polls_via_router_and_refetches_result_without_authorization()
     {
-        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Bytes(EditedImage, "image/png"));
+        var handler = FalHandler("https://v3b.fal.media/files/edited.png");
         var svc = new HuggingFaceImageEditService(new HttpClient(handler), Options());
 
         var media = await svc.GenerateAsync(ReferenceImage, "make it night", CancellationToken.None);
 
         Assert.Equal(EditedImage, media.Bytes);
-        Assert.Equal("image/png", media.ContentType);
-        Assert.Single(handler.Seen);
-    }
 
-    // Provider may return JSON-URL (e.g. fal-ai); reuse the shared SSRF-guarded re-fetch.
-    [Fact]
-    public async Task Json_url_response_is_refetched_without_authorization()
-    {
-        var handler = new StubHttpMessageHandler(req => req.Method == HttpMethod.Post
-            ? StubHttpMessageHandler.Json("{\"images\":[{\"url\":\"https://cdn.fal.media/edited.png\"}]}")
-            : StubHttpMessageHandler.Bytes(EditedImage, "image/png"));
-        var svc = new HuggingFaceImageEditService(new HttpClient(handler), Options());
+        // status poll went to the router host with auth.
+        var status = handler.Seen.First(s => s.Uri!.AbsolutePath.EndsWith("/status", StringComparison.Ordinal));
+        Assert.Equal("router.huggingface.co", status.Uri!.Host);
+        Assert.Contains("_subdomain=queue", status.Uri!.Query);
+        Assert.True(status.HasAuthorization);
 
-        var media = await svc.GenerateAsync(ReferenceImage, "add snow", CancellationToken.None);
-
-        Assert.Equal(EditedImage, media.Bytes);
-        Assert.Equal(HttpMethod.Get, handler.Seen[1].Method);
-        Assert.Equal("cdn.fal.media", handler.Seen[1].Uri!.Host);
-        Assert.False(handler.Seen[1].HasAuthorization);
+        // final image re-fetch went to fal.media WITHOUT auth (SSRF-guarded helper).
+        var fetch = handler.Seen.Last();
+        Assert.Equal("v3b.fal.media", fetch.Uri!.Host);
+        Assert.False(fetch.HasAuthorization);
     }
 
     [Fact]
-    public async Task Json_url_on_disallowed_host_is_rejected()
+    public async Task Result_url_on_disallowed_host_is_rejected()
     {
-        var handler = new StubHttpMessageHandler(req => req.Method == HttpMethod.Post
-            ? StubHttpMessageHandler.Json("{\"url\":\"https://evil.example.com/edited.png\"}")
-            : StubHttpMessageHandler.Bytes(EditedImage, "image/png"));
+        var handler = FalHandler("https://evil.example.com/edited.png");
         var svc = new HuggingFaceImageEditService(new HttpClient(handler), Options());
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => svc.GenerateAsync(ReferenceImage, "add snow", CancellationToken.None));
-        Assert.Single(handler.Seen); // POST only; no re-fetch
     }
+
+    // The HF token must never be sent to a host other than the router: only queue.fal.run URLs are rewritten.
+    [Theory]
+    [InlineData("https://queue.fal.run/fal-ai/qwen-image-edit/requests/x/status",
+                "https://router.huggingface.co/fal-ai/fal-ai/qwen-image-edit/requests/x/status?_subdomain=queue")]
+    public void ToRouterUrl_rewrites_queue_urls(string input, string expected) =>
+        Assert.Equal(expected, HuggingFaceImageEditService.ToRouterUrl(input));
+
+    [Theory]
+    [InlineData("https://evil.example.com/requests/x/status")]
+    [InlineData("https://queue.fal.run.evil.com/x")]
+    [InlineData("http://queue.fal.run/x")]
+    public void ToRouterUrl_rejects_non_queue_hosts(string input) =>
+        Assert.Throws<InvalidOperationException>(() => HuggingFaceImageEditService.ToRouterUrl(input));
 
     [Fact]
     public void ImageEdit_defaults_match_docs()
     {
         var o = new HuggingFaceOptions();
-        Assert.Equal("Qwen/Qwen-Image-Edit", o.ImageEditModel);
-        Assert.Equal("https://router.huggingface.co/hf-inference/models/{model}", o.ImageEditEndpoint);
+        Assert.Equal("fal-ai/qwen-image-edit", o.ImageEditModel);
+        Assert.Equal("https://router.huggingface.co/fal-ai/{model}?_subdomain=queue", o.ImageEditEndpoint);
         Assert.Equal(120, o.ImageEditTimeoutSeconds);
     }
 }
