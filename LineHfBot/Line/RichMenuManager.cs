@@ -8,7 +8,7 @@ namespace LineHfBot.Line;
 
 /// <summary>
 /// Provisions the mode-switcher rich menu (one highlighted variant per mode) and keeps a user's
-/// displayed menu in sync when the mode changes outside a menu tap (quick reply / slash command).
+/// displayed menu in sync when the mode changes off-menu (e.g. the "back to chat" quick reply).
 /// Provisioning is idempotent: menus already registered (detected by alias) are reused.
 /// </summary>
 public sealed class RichMenuManager

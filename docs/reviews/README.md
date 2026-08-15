@@ -35,6 +35,9 @@ Verdict: PASS | FAIL
 
 ## 記録インデックス
 <!-- 新しい判定を上に追記する -->
+- 2026-08-15 **PASS** ドキュメントレビュー（モードコンテキスト+リッチメニュー+i18n / spec03 3a）— [`18-doc-mode-richmenu.md`](18-doc-mode-richmenu.md)（Blocker/Major 0、Minor 3。App__Locale/App__RichMenuEnabled が実コードと全ドキュメントで一致。前回(13)Major の QuickReply 齟齬は 🔄/💬 実装＋添付で解消。✏️編集=3b は未実装として正しく表記）
+- 2026-08-15 **PASS** セキュリティレビュー（モードコンテキスト+リッチメニュー+i18n / spec03 3a）— [`17-security-mode-richmenu.md`](17-security-mode-richmenu.md)（Critical/High/Medium 0、Low 1・Info 1、脆弱パッケージ0。署名検証は回帰なし・トークン非露出・postback入力は安全に無視・locale由来のパストラバーサルなし。SSRFは3a新経路なし）
+- 2026-08-15 **PASS** 実装レビュー（モードコンテキスト+リッチメニュー+i18n / spec03 3a）— [`16-impl-mode-richmenu.md`](16-impl-mode-richmenu.md)（Blocker/Major 0、Minor 4。ビルド0警告/0エラー。UserStateStore並行性・冪等provisioning・Kiota判別子・i18nを確認。✏️編集/AC#5は仕様どおり3bへ後回し。Roslyn MCP未接続で手動フォールバック）
 - 2026-08-15 **PASS** 仕様レビュー（モードコンテキスト+リッチメニュー+画像セッション+i18n）— [`15-spec-mode-richmenu.md`](15-spec-mode-richmenu.md)（初回 FAIL→修正反映で再レビュー PASS。Blocker 0、前回 Major 3・Minor 3＋残 Minor 1 を全反映。3a は spec02 非依存で着手可）
 - 2026-08-15 **PASS** 仕様レビュー（画像Provider統合・案A）— [`14-spec-image-provider.md`](14-spec-image-provider.md)（Blocker 0、Major 2・Minor 1 は仕様へ反映済み。allowlist のラベル境界明文化と動画 JSON-URL 回帰防止を対応）
 - 2026-08-15 **PASS** ドキュメントレビュー（全体統合点検）— [`13-doc-full-audit.md`](13-doc-full-audit.md)（Blocker 0、Major 1・Minor 2。CLAUDE.md の QuickReply 記述が未実装＝要修正だが再現性・設定整合は全一致で PASS）

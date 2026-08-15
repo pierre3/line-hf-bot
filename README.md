@@ -11,7 +11,7 @@ expose it through a tunnel, and connect it to LINE. It can also be hosted in the
 - 🎨 **Image generation** — `/image <prompt>`, or switch to Image mode and just send a description
 - 🎬 Video generation — scaffolded but **off by default** (`App:VideoEnabled`); needs a video provider integration
 - 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
-  interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate.
+  interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate and 💬 Chat.
 - 🌐 **English by default, Japanese available** (`App:Locale` = `en`/`ja`); user-facing text and the rich menu follow it
 - 🐳 Ships as a Docker image; run locally with a tunnel, or host in the cloud
 
