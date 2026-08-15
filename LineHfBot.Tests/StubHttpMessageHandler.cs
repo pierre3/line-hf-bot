@@ -11,12 +11,14 @@ namespace LineHfBot.Tests;
 /// </summary>
 internal sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
 {
-    public List<(HttpMethod Method, Uri? Uri, bool HasAuthorization)> Seen { get; } = [];
+    public List<(HttpMethod Method, Uri? Uri, bool HasAuthorization, string? Body)> Seen { get; } = [];
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Seen.Add((request.Method, request.RequestUri, request.Headers.Authorization is not null));
-        return Task.FromResult(responder(request));
+        // Capture the body at send time (before the caller disposes the request).
+        var body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+        Seen.Add((request.Method, request.RequestUri, request.Headers.Authorization is not null, body));
+        return responder(request);
     }
 
     public static HttpResponseMessage Json(string body) => new(HttpStatusCode.OK)

@@ -17,6 +17,7 @@ namespace LineHfBot.Queue;
 public sealed class WorkProcessor(
     IChatService chat,
     IImageService imageService,
+    IImageEditService imageEditService,
     IVideoService videoService,
     ChatHistoryStore history,
     UserStateStore userState,
@@ -47,6 +48,9 @@ public sealed class WorkProcessor(
                     break;
                 case WorkKind.Image:
                     await HandleImageAsync(item, cancellationToken);
+                    break;
+                case WorkKind.ImageEdit:
+                    await HandleImageEditAsync(item, cancellationToken);
                     break;
                 case WorkKind.Video:
                     if (appOptions.Value.VideoEnabled)
@@ -81,6 +85,30 @@ public sealed class WorkProcessor(
         var id = mediaStore.Save(media);
         // Remember this generation so the user can regenerate (same prompt) or edit (3b).
         userState.SetLastImage(item.UserId, item.Text, id);
+        var url = $"{baseUrl}/media/{id}";
+        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, quickReplies.ImageResult);
+    }
+
+    private async Task HandleImageEditAsync(WorkItem item, CancellationToken cancellationToken)
+    {
+        var baseUrl = await PrepareMediaAsync(item, messages.EditPrompt, messages.EditingImage, cancellationToken);
+        if (baseUrl is null)
+        {
+            return;
+        }
+
+        // The reference image is the user's last generation; it lives in the TTL media cache and may have expired.
+        if (string.IsNullOrEmpty(item.RefImageId) ||
+            !mediaStore.TryGet(item.RefImageId, out var reference) || reference is null)
+        {
+            await SendAsync(item, messages.EditImageExpired, cancellationToken);
+            return;
+        }
+
+        var media = await imageEditService.GenerateAsync(reference.Bytes, item.Text, cancellationToken);
+        var id = mediaStore.Save(media);
+        // Chain further edits on the edited result; keep LastPrompt so regenerate still uses the original prompt.
+        userState.SetLastImageId(item.UserId, id);
         var url = $"{baseUrl}/media/{id}";
         await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, quickReplies.ImageResult);
     }

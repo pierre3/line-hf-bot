@@ -56,6 +56,9 @@ builder.Services.AddHttpClient<IImageService, HuggingFaceImageService>(
 builder.Services.AddHttpClient<IVideoService, HuggingFaceVideoService>(
         c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient<IImageEditService, HuggingFaceImageEditService>(
+        c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();

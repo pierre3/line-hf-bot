@@ -43,12 +43,34 @@ public sealed class MessageDispatcher(
         var replyToken = me.ReplyToken ?? "";
         var eventId = me.WebhookEventId ?? "";
         var raw = (text.Text ?? "").Trim();
+        var snapshot = userState.Get(userId);
+
+        // If we're waiting for an edit instruction, the next message resolves it: a plain message is
+        // the instruction (edit the last image); a slash command cancels the edit and runs normally.
+        if (snapshot.AwaitingEdit)
+        {
+            userState.SetAwaitingEdit(userId, false);
+            if (!raw.StartsWith('/'))
+            {
+                if (!string.IsNullOrWhiteSpace(snapshot.LastImageId))
+                {
+                    await EnqueueOrBusyAsync(
+                        new WorkItem(WorkKind.ImageEdit, userId, replyToken, raw, eventId, snapshot.LastImageId),
+                        replyToken, cancellationToken);
+                }
+                else if (!string.IsNullOrEmpty(replyToken))
+                {
+                    await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
+                }
+                return;
+            }
+        }
 
         // A leading slash is an explicit command override; it does not change the current mode.
         // Otherwise the message is interpreted by the user's current mode.
         var (kind, body) = raw.StartsWith('/')
             ? ParseCommand(raw)
-            : userState.GetMode(userId) switch
+            : snapshot.Mode switch
             {
                 ChatMode.Image => (WorkKind.Image, raw),
                 ChatMode.Video => (WorkKind.Video, raw),
@@ -72,6 +94,7 @@ public sealed class MessageDispatcher(
         switch (action)
         {
             case "mode" when data.TryGetValue("value", out var value) && TryParseMode(value, out var mode):
+                userState.SetAwaitingEdit(userId, false); // switching mode cancels a pending edit
                 userState.SetMode(userId, mode);
                 await richMenu.SyncUserMenuAsync(userId, mode, cancellationToken);
                 logger.LogInformation("mode change: user={User} mode={Mode}", userId, mode);
@@ -82,6 +105,7 @@ public sealed class MessageDispatcher(
                 break;
 
             case "regen":
+                userState.SetAwaitingEdit(userId, false); // regenerate cancels a pending edit
                 var snapshot = userState.Get(userId);
                 if (!string.IsNullOrWhiteSpace(snapshot.LastPrompt))
                 {
@@ -92,6 +116,23 @@ public sealed class MessageDispatcher(
                 else if (!string.IsNullOrEmpty(replyToken))
                 {
                     await messenger.TryReplyTextAsync(replyToken, messages.RegenNoImage, cancellationToken);
+                }
+                break;
+
+            case "edit":
+                var editSnap = userState.Get(userId);
+                if (!string.IsNullOrWhiteSpace(editSnap.LastImageId))
+                {
+                    // Wait for the next plain message; it becomes the edit instruction.
+                    userState.SetAwaitingEdit(userId, true);
+                    if (!string.IsNullOrEmpty(replyToken))
+                    {
+                        await messenger.TryReplyTextAsync(replyToken, messages.EditPrompt, cancellationToken);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(replyToken))
+                {
+                    await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
                 }
                 break;
         }

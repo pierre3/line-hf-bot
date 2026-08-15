@@ -33,6 +33,12 @@ public sealed class UserMessages
     public string ModeVideoSet => _s.ModeVideoSet;
     public string RegenNoImage => _s.RegenNoImage;
 
+    // Image edit (3b)
+    public string EditPrompt => _s.EditPrompt;
+    public string EditingImage => _s.EditingImage;
+    public string EditNoImage => _s.EditNoImage;
+    public string EditImageExpired => _s.EditImageExpired;
+
     // Quick reply button labels
     public string LabelRegenerate => _s.LabelRegenerate;
     public string LabelEdit => _s.LabelEdit;
@@ -57,6 +63,10 @@ public sealed class UserMessages
         string ModeImageSet,
         string ModeVideoSet,
         string RegenNoImage,
+        string EditPrompt,
+        string EditingImage,
+        string EditNoImage,
+        string EditImageExpired,
         string LabelRegenerate,
         string LabelEdit,
         string LabelBackToChat,
@@ -68,6 +78,7 @@ public sealed class UserMessages
             "・Send a message to chat with the AI\n" +
             "・Use the menu at the bottom to switch mode (Chat / Image / Video)\n" +
             "・In Image mode, send a description to generate an image\n" +
+            "・After an image, tap 🔄 to regenerate or ✏️ to edit it\n" +
             "・/image <text> … make an image\n" +
             "・/video <text> … make a video\n" +
             "・/reset … clear the conversation\n" +
@@ -86,6 +97,10 @@ public sealed class UserMessages
         ModeImageSet: "Switched to Image mode. Send a description of what to create.",
         ModeVideoSet: "Switched to Video mode. Send a description of what to create.",
         RegenNoImage: "Make an image first, then you can regenerate it.",
+        EditPrompt: "How should I edit it? Send an instruction. e.g. add a hat",
+        EditingImage: "Editing your image… please wait ✏️",
+        EditNoImage: "Make an image first, then you can edit it.",
+        EditImageExpired: "That image is no longer available. Please make a new one and try again.",
         LabelRegenerate: "🔄 Regenerate",
         LabelEdit: "✏️ Edit",
         LabelBackToChat: "💬 Chat",
@@ -97,6 +112,7 @@ public sealed class UserMessages
             "・そのままメッセージを送ると AI とチャットできます\n" +
             "・下のメニューでモード（チャット / 画像 / 動画）を切り替えられます\n" +
             "・画像モードでは、説明を送ると画像を作ります\n" +
+            "・画像のあとは 🔄 で作り直し、✏️ で編集できます\n" +
             "・/image 説明 … 画像を作ります\n" +
             "・/video 説明 … 動画を作ります\n" +
             "・/reset … 会話の履歴を消します\n" +
@@ -115,6 +131,10 @@ public sealed class UserMessages
         ModeImageSet: "画像モードにしました。作りたいものを説明して送ってください。",
         ModeVideoSet: "動画モードにしました。作りたいものを説明して送ってください。",
         RegenNoImage: "先に画像を作ってください。作ったあとに再生成できます。",
+        EditPrompt: "どう編集しますか？指示を送ってください。例: 帽子を足して",
+        EditingImage: "画像を編集しています…少しお待ちください ✏️",
+        EditNoImage: "先に画像を作ってください。作ったあとに編集できます。",
+        EditImageExpired: "その画像はもう使えません。もう一度作ってから試してください。",
         LabelRegenerate: "🔄 再生成",
         LabelEdit: "✏️ 編集",
         LabelBackToChat: "💬 チャットへ",

@@ -35,20 +35,8 @@ public sealed class HuggingFaceVideoService(HttpClient http, IOptions<HuggingFac
         using var response = await http.SendAsync(request, cts.Token);
         await HfHttp.EnsureSuccessAsync(response, cts.Token);
 
-        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
-
         // Some providers return JSON with a URL to the video rather than the bytes directly.
-        if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
-        {
-            var json = await response.Content.ReadAsStringAsync(cts.Token);
-            var videoUrl = MediaUrlExtractor.TryExtract(json)
-                ?? throw new InvalidOperationException("Video URL not found in provider response.");
-            var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
-            var (bytesFromUrl, refetchedType) = await MediaRefetch.FetchAsync(http, videoUrl, allowed, cts.Token);
-            return new GeneratedMedia(bytesFromUrl, string.IsNullOrEmpty(refetchedType) ? "video/mp4" : refetchedType);
-        }
-
-        var bytes = await response.Content.ReadAsByteArrayAsync(cts.Token);
-        return new GeneratedMedia(bytes, string.IsNullOrEmpty(contentType) ? "video/mp4" : contentType);
+        var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
+        return await MediaResponse.ReadAsync(http, response, allowed, "video/mp4", cts.Token);
     }
 }
