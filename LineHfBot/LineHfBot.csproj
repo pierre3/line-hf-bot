@@ -13,4 +13,9 @@
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.HuggingFace" Version="1.79.0-preview" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Rich menu images, uploaded to LINE at startup. Copied to output so publish/Docker carries them. -->
+    <Content Include="Assets\richmenu\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

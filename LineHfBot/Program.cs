@@ -9,6 +9,8 @@ using LineHfBot.Line;
 using LineHfBot.Media;
 using LineHfBot.Messaging;
 using LineHfBot.Queue;
+using LineHfBot.State;
+using LineHfBot.Text;
 using Microsoft.SemanticKernel;
 
 // Force UTF-8 console output so Japanese log text is not garbled on Windows.
@@ -37,9 +39,13 @@ builder.Services.AddHuggingFaceChatCompletion(
 
 // --- App services ---
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<UserMessages>();
 builder.Services.AddSingleton<ChatHistoryStore>();
+builder.Services.AddSingleton<UserStateStore>();
 builder.Services.AddSingleton<IChatService, HuggingFaceChatService>();
 builder.Services.AddSingleton<ILineMessenger, LineMessenger>();
+builder.Services.AddSingleton<QuickReplyFactory>();
+builder.Services.AddSingleton<RichMenuManager>();
 builder.Services.AddSingleton<MediaStore>();
 builder.Services.AddSingleton<ProcessedEventStore>();
 builder.Services.AddHttpClient<IImageService, HuggingFaceImageService>(
@@ -52,6 +58,7 @@ builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();
 builder.Services.AddScoped<IWorkProcessor, WorkProcessor>();
 builder.Services.AddSingleton<MessageDispatcher>();
 builder.Services.AddHostedService<GenerationWorker>();
+builder.Services.AddHostedService<RichMenuProvisioner>();
 
 var app = builder.Build();
 

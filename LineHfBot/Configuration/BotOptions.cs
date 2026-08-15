@@ -58,6 +58,17 @@ public sealed class AppOptions
     /// integration (async job APIs), so the scaffold ships disabled until a provider is wired.
     /// </summary>
     public bool VideoEnabled { get; set; }
+
+    /// <summary>
+    /// UI language for user-facing text and the rich menu images ("en" or "ja").
+    /// English is the default for the published image; set to "ja" for Japanese.
+    /// </summary>
+    public string Locale { get; set; } = "en";
+
+    /// <summary>
+    /// Provision the mode-switcher rich menu on startup (idempotent). Disable to run without a rich menu.
+    /// </summary>
+    public bool RichMenuEnabled { get; set; } = true;
 }
 
 /// <summary>Background queue settings (section: "Queue").</summary>

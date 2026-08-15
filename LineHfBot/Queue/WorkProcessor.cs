@@ -3,6 +3,7 @@ using LineHfBot.Chat;
 using LineHfBot.Configuration;
 using LineHfBot.Line;
 using LineHfBot.Media;
+using LineHfBot.State;
 using LineHfBot.Text;
 using Line.OpenApi.Messaging.Generated.Api.Models;
 using Microsoft.Extensions.Options;
@@ -18,9 +19,12 @@ public sealed class WorkProcessor(
     IImageService imageService,
     IVideoService videoService,
     ChatHistoryStore history,
+    UserStateStore userState,
     MediaStore mediaStore,
     ProcessedEventStore processedEvents,
     ILineMessenger messenger,
+    QuickReplyFactory quickReplies,
+    UserMessages messages,
     IOptions<AppOptions> appOptions,
     ILogger<WorkProcessor> logger) : IWorkProcessor
 {
@@ -32,13 +36,14 @@ public sealed class WorkProcessor(
             {
                 case WorkKind.Reset:
                     history.Reset(item.UserId);
-                    await SendAsync(item, UserMessages.ResetDone, cancellationToken);
+                    userState.Reset(item.UserId);
+                    await SendAsync(item, messages.ResetDone, cancellationToken);
                     break;
                 case WorkKind.Help:
-                    await SendAsync(item, UserMessages.Help, cancellationToken);
+                    await SendAsync(item, messages.Help, cancellationToken);
                     break;
                 case WorkKind.Chat:
-                    await SendAsync(item, await chat.CompleteAsync(item.UserId, item.Text, cancellationToken), cancellationToken, QuickReplies.Default);
+                    await SendAsync(item, await chat.CompleteAsync(item.UserId, item.Text, cancellationToken), cancellationToken);
                     break;
                 case WorkKind.Image:
                     await HandleImageAsync(item, cancellationToken);
@@ -51,7 +56,7 @@ public sealed class WorkProcessor(
                     else
                     {
                         // text-to-video needs a provider integration; ships disabled for now.
-                        await SendAsync(item, UserMessages.NotYetImplemented, cancellationToken);
+                        await SendAsync(item, messages.NotYetImplemented, cancellationToken);
                     }
                     break;
             }
@@ -60,26 +65,29 @@ public sealed class WorkProcessor(
         {
             logger.LogError(ex, "Failed to handle item kind={Kind} user={User}", item.Kind, item.UserId);
             // Best-effort notification; ignore secondary failures.
-            try { await SendAsync(item, UserMessages.Error, cancellationToken); } catch { /* ignore */ }
+            try { await SendAsync(item, messages.Error, cancellationToken); } catch { /* ignore */ }
         }
     }
 
     private async Task HandleImageAsync(WorkItem item, CancellationToken cancellationToken)
     {
-        var baseUrl = await PrepareMediaAsync(item, UserMessages.ImageUsage, UserMessages.GeneratingImage, cancellationToken);
+        var baseUrl = await PrepareMediaAsync(item, messages.ImageUsage, messages.GeneratingImage, cancellationToken);
         if (baseUrl is null)
         {
             return;
         }
 
         var media = await imageService.GenerateAsync(item.Text, cancellationToken);
-        var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
-        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, QuickReplies.Default);
+        var id = mediaStore.Save(media);
+        // Remember this generation so the user can regenerate (same prompt) or edit (3b).
+        userState.SetLastImage(item.UserId, item.Text, id);
+        var url = $"{baseUrl}/media/{id}";
+        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, quickReplies.ImageResult);
     }
 
     private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)
     {
-        var baseUrl = await PrepareMediaAsync(item, UserMessages.VideoUsage, UserMessages.GeneratingVideo, cancellationToken);
+        var baseUrl = await PrepareMediaAsync(item, messages.VideoUsage, messages.GeneratingVideo, cancellationToken);
         if (baseUrl is null)
         {
             return;
@@ -87,7 +95,7 @@ public sealed class WorkProcessor(
 
         var media = await videoService.GenerateAsync(item.Text, cancellationToken);
         var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
-        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken, QuickReplies.Default);
+        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken, quickReplies.VideoResult);
     }
 
     /// <summary>
@@ -114,7 +122,7 @@ public sealed class WorkProcessor(
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
             logger.LogError("App:PublicBaseUrl is not set; cannot deliver generated media.");
-            await SendAsync(item, UserMessages.Error, cancellationToken);
+            await SendAsync(item, messages.Error, cancellationToken);
             return null;
         }
 
