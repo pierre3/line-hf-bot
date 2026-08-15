@@ -168,7 +168,7 @@ if (app.Environment.IsDevelopment())
     // text-to-image, then edits it with the given instruction. Returns the edited bytes, or an error.
     // Example: GET /dev/imageedit?prompt=make%20it%20night  (curl -o out.png)
     app.MapGet("/dev/imageedit", async (
-        string prompt, IImageService images, IImageEditService edit, CancellationToken ct) =>
+        string? prompt, IImageService images, IImageEditService edit, CancellationToken ct) =>
     {
         try
         {
