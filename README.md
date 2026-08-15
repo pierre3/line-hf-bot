@@ -2,7 +2,7 @@
 
 English | [日本語](README.ja.md)
 
-A LINE bot that uses Hugging Face models for **AI chat and image generation** (with video planned).
+A LINE bot that uses Hugging Face models for **AI chat, image generation, and image editing** (video is planned).
 Built on ASP.NET (.NET 10). The aim is to keep it easy to run: start the Docker image on your PC,
 expose it through a tunnel, and connect it to LINE. It can also be hosted in the cloud.
 
@@ -71,11 +71,14 @@ Add the bot as a friend (QR code in the LINE console) and message it.
 ## Commands
 | Input | Result |
 | --- | --- |
-| any text | AI chat reply |
+| any text | interpreted by the current mode (chat / image / video) |
+| a photo | the bot asks how to edit it; your next message edits it (image-to-image) |
 | `/image <prompt>` | generate an image |
 | `/video <prompt>` | disabled by default (see `App:VideoEnabled`) |
-| `/reset` | clear conversation history |
+| `/reset` | clear conversation history and reset mode |
 | `/help` | show usage |
+
+Slash commands work in any mode without changing it. Image results carry 🔄 Regenerate / ✏️ Edit / 💬 Chat buttons.
 
 ## Configuration
 All settings are environment variables (`Section__Key`). See [`.env.example`](.env.example) for the full list; the essentials:
@@ -89,6 +92,9 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `HuggingFace__ImageEditModel` | image-to-image model for the ✏️ edit button (default `Qwen/Qwen-Image-Edit`) |
 | `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
+| `App__Locale` | UI language for user-facing text and the rich menu (`en` default, or `ja`) |
+| `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
+| `App__VideoEnabled` | enable `/video` once a provider is wired (default `false`) |
 
 ## Publish to Docker Hub
 ```bash
@@ -105,8 +111,9 @@ docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
 - Hugging Face Inference Providers (image / video)
 
 ## Documentation
-- Spec: [`docs/specs/01-line-hf-bot.md`](docs/specs/01-line-hf-bot.md)
-- Review records: [`docs/reviews/`](docs/reviews/)
+- Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos
+- Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
+- Contributor and architecture notes: [`CLAUDE.md`](CLAUDE.md)
 - Developer guide: [`CLAUDE.md`](CLAUDE.md)
 
 ## License
