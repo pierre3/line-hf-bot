@@ -35,6 +35,7 @@ Verdict: PASS | FAIL
 
 ## 記録インデックス
 <!-- 新しい判定を上に追記する -->
+- 2026-08-15 **PASS** 仕様レビュー（モードコンテキスト+リッチメニュー+画像セッション+i18n）— [`15-spec-mode-richmenu.md`](15-spec-mode-richmenu.md)（初回 FAIL→修正反映で再レビュー PASS。Blocker 0、前回 Major 3・Minor 3＋残 Minor 1 を全反映。3a は spec02 非依存で着手可）
 - 2026-08-15 **PASS** 仕様レビュー（画像Provider統合・案A）— [`14-spec-image-provider.md`](14-spec-image-provider.md)（Blocker 0、Major 2・Minor 1 は仕様へ反映済み。allowlist のラベル境界明文化と動画 JSON-URL 回帰防止を対応）
 - 2026-08-15 **PASS** ドキュメントレビュー（全体統合点検）— [`13-doc-full-audit.md`](13-doc-full-audit.md)（Blocker 0、Major 1・Minor 2。CLAUDE.md の QuickReply 記述が未実装＝要修正だが再現性・設定整合は全一致で PASS）
 - 2026-08-15 **PASS** セキュリティレビュー（全体統合点検）— [`12-security-full-audit.md`](12-security-full-audit.md)（Critical/High/Medium 0、Low 2・Info 3、脆弱パッケージ0。SSRFはトークン非同送・video既定オフでLow止まり）
