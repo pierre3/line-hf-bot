@@ -89,7 +89,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | 編集用に受信するユーザー画像の取得上限/タイムアウト（既定 10MB / 30秒） |
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
-| `HuggingFace__ImageEditModel` | ✏️編集ボタンの image-to-image モデル（既定 `Qwen/Qwen-Image-Edit`） |
+| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal は**有料**（Inference Providers のクレジットが必要） |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 | `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |

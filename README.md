@@ -89,7 +89,7 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | limits for downloading a user-sent image to edit (default 10 MB / 30 s) |
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
-| `HuggingFace__ImageEditModel` | image-to-image model for the ✏️ edit button (default `Qwen/Qwen-Image-Edit`) |
+| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | image-to-image via the **fal-ai** provider (default `fal-ai/qwen-image-edit`). hf-inference doesn't serve image-to-image; fal is a **paid** provider (needs Inference Providers credits) |
 | `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 | `App__Locale` | UI language for user-facing text and the rich menu (`en` default, or `ja`) |
