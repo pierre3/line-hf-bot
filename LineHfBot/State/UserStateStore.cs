@@ -63,6 +63,17 @@ public sealed class UserStateStore
         }
     }
 
+    /// <summary>Update only the last image id (e.g. after an edit) so further edits chain on the new result,
+    /// while keeping LastPrompt so regenerate still uses the original text-to-image prompt.</summary>
+    public void SetLastImageId(string userId, string imageId)
+    {
+        var s = _byUser.GetOrAdd(userId, static _ => new UserState());
+        lock (s)
+        {
+            s.LastImageId = imageId;
+        }
+    }
+
     /// <summary>Set/clear the "next text is an edit instruction" flag (used by 3b image editing).</summary>
     public void SetAwaitingEdit(string userId, bool awaiting)
     {

@@ -11,12 +11,13 @@ namespace LineHfBot.Line;
 /// </summary>
 public sealed class QuickReplyFactory(UserMessages messages)
 {
-    /// <summary>Buttons under an image result: regenerate (same prompt) and back to chat. (Edit arrives in 3b.)</summary>
+    /// <summary>Buttons under an image result: regenerate (same prompt), edit (image-to-image), back to chat.</summary>
     public QuickReply ImageResult => new()
     {
         Items =
         [
             Item(messages.LabelRegenerate, "action=regen"),
+            Item(messages.LabelEdit, "action=edit"),
             Item(messages.LabelBackToChat, "action=mode&value=chat"),
         ],
     };

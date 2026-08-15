@@ -1,6 +1,6 @@
 # 仕様: モードコンテキスト + リッチメニュー + 画像セッション + i18n
 
-- 状態: ドラフト（仕様ゲート未実施）
+- 状態: 実装済み（3a 4ゲート全PASS=15〜18 / 3b 実装済み・ゲート予定）。3b の img2img payload は `{inputs=base64, parameters.prompt}`（HF image-to-image）に確定。
 - 対象: 拡張フェーズ / 対話モデルの再設計（モード状態・リッチメニュー・画像セッション・多言語）
 - 関連: `docs/specs/01-line-hf-bot.md`、`docs/specs/02-image-provider-integration.md`（image-to-image の payload 分岐を再利用）、`scripts/richmenu/`（メニュー画像生成）
 - 依存: **3b（画像編集=image-to-image）は spec 02 実装後**。3a は spec 02 非依存。

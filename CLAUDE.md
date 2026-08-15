@@ -18,7 +18,7 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 ## アーキテクチャ要点
 - webhook は署名検証後**即 200**。生成は `System.Threading.Channels` + `BackgroundService` で非同期処理し、完了後に **Push API** で送信（reply トークンは短命なため）。
 - モード状態: per-user に現在モード（chat/image/video）をメモリ保持し、**素メッセージを現在モードで解釈**（既定 chat）。`/image`・`/video`・`/reset`・`/help` は明示上書き。モード切替は**リッチメニュー**（起動時に冪等 provisioning、alias で `richmenuswitch`）。
-- 画像結果に **QuickReply**（`🔄 再生成`／`💬 チャットへ`。`✏️ 編集`は image-to-image=3b で追加）。動画結果は `💬 チャットへ`。ボタンは postback で `MessageDispatcher` が処理。
+- 画像結果に **QuickReply**（`🔄 再生成`／`✏️ 編集`／`💬 チャットへ`）。`✏️ 編集`は次の非コマンドテキストを編集指示として **image-to-image（`Qwen/Qwen-Image-Edit`）** で処理（`AwaitingEdit`。モード切替/コマンドでキャンセル）。動画結果は `💬 チャットへ`。ボタンは postback で `MessageDispatcher` が処理。
 - 生成メディアは **メモリ内 TTL キャッシュ**（既定10分、`IMemoryCache`）で保持し `/media/{id}` 配信。
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
 
@@ -29,8 +29,9 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
   `HuggingFace__VideoEndpoint`(text-to-video。`{model}` を VideoModel で置換。プロバイダ依存。バイト or JSON(URL) 両対応),
+  `HuggingFace__ImageEditModel`(既定 `Qwen/Qwen-Image-Edit`。✏️編集=image-to-image のモデル) / `ImageEditEndpoint`(`{model}` を ImageEditModel で置換。プロバイダ依存),
   `HuggingFace__MediaRefetchAllowedHosts`(既定 `fal.media;replicate.delivery`。JSON-URL 応答の再取得を許可するホスト。画像・動画共通。ラベル境界一致・**空なら全拒否**),
-  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
+  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `ImageEditTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
 - `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ),
   `App__Locale`(ユーザー向け文言＋リッチメニューの言語。既定 `en`、`ja` 可), `App__RichMenuEnabled`(既定 true。起動時のリッチメニュー provisioning)
 - `Queue__Capacity`(100), `Queue__Workers`(2)

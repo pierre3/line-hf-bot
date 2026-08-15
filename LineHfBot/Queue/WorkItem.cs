@@ -5,6 +5,7 @@ public enum WorkKind
 {
     Chat,
     Image,
+    ImageEdit,
     Video,
     Reset,
     Help,
@@ -14,11 +15,13 @@ public enum WorkKind
 /// <param name="Kind">Work kind.</param>
 /// <param name="UserId">Sender's LINE user id.</param>
 /// <param name="ReplyToken">Reply token for the immediate ack (short-lived, single use).</param>
-/// <param name="Text">Prompt text (command prefix already stripped).</param>
+/// <param name="Text">Prompt text (command prefix already stripped). For ImageEdit this is the edit instruction.</param>
 /// <param name="WebhookEventId">Unique id used for idempotency.</param>
+/// <param name="RefImageId">For ImageEdit: media id of the reference image to edit (from the last generation).</param>
 public sealed record WorkItem(
     WorkKind Kind,
     string UserId,
     string ReplyToken,
     string Text,
-    string WebhookEventId);
+    string WebhookEventId,
+    string? RefImageId = null);
