@@ -37,6 +37,13 @@ public sealed class HuggingFaceOptions
     /// containing a video URL (both are handled).
     /// </summary>
     public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+
+    /// <summary>
+    /// Hosts allowed when re-fetching media from a provider-supplied URL (JSON-URL responses).
+    /// Shared by the image and video paths. Separated by ";" / "," / whitespace; label-boundary match
+    /// (e.g. "fal.media" allows "cdn.fal.media" but not "evilfal.media"). Empty = deny all (fail-closed).
+    /// </summary>
+    public string MediaRefetchAllowedHosts { get; set; } = "fal.media;replicate.delivery";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;

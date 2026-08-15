@@ -1,6 +1,6 @@
 # 仕様: 画像 Provider 統合（案A: 設定駆動の単一パス）
 
-- 状態: ドラフト（仕様ゲート未実施）
+- 状態: 実装済み（4ゲート全PASS: 仕様=14 / 実装=19 / セキュリティ=20 / ドキュメント=21）
 - 対象: 拡張フェーズ / 画像生成の複数プロバイダ対応
 - 関連: `docs/specs/01-line-hf-bot.md`、`docs/reviews/12-security-full-audit.md`（Low#1 SSRF）、`LineHfBot/Ai/ImageService.cs`、`LineHfBot/Ai/VideoService.cs`
 
@@ -51,7 +51,7 @@ JSON-URL 再取得経路に多層防御を追加する（画像・動画共通�
 ## 3. 設定（追加・変更）
 | キー | 既定 | 説明 |
 |---|---|---|
-| `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | JSON-URL 再取得で許可するホスト（サフィックス一致、`;` 区切り or 配列）。画像・動画共通。空なら全拒否 |
+| `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | JSON-URL 再取得で許可するホスト（ラベル境界一致、`;` 区切り or 配列）。画像・動画共通。空なら全拒否 |
 | （既存）`HuggingFace__ImageEndpoint` | `.../hf-inference/models/{model}` | 変更なし。プロバイダ切替に使用 |
 | （既存）`HuggingFace__ImageModel` | 現行既定 | `:cheapest` 等のサフィックス指定を許容 |
 

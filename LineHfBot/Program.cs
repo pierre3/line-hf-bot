@@ -48,10 +48,14 @@ builder.Services.AddSingleton<QuickReplyFactory>();
 builder.Services.AddSingleton<RichMenuManager>();
 builder.Services.AddSingleton<MediaStore>();
 builder.Services.AddSingleton<ProcessedEventStore>();
+// Disable auto-redirect: the JSON-URL re-fetch validates the host against the allowlist, so a 3xx
+// must not silently follow into a non-allowlisted host (SSRF allowlist-bypass hardening).
 builder.Services.AddHttpClient<IImageService, HuggingFaceImageService>(
-    c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan); // per-request timeout is applied in the service
+        c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan) // per-request timeout is applied in the service
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<IVideoService, HuggingFaceVideoService>(
-    c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan);
+        c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();

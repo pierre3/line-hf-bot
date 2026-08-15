@@ -13,7 +13,9 @@ public interface IImageService
 }
 
 /// <summary>
-/// Calls the HF text-to-image endpoint and returns the raw image bytes.
+/// Calls the HF text-to-image endpoint. Handles both response styles like the video path:
+/// raw image bytes, or a JSON body containing a URL to the generated image (which is then
+/// re-fetched through the shared SSRF-guarded helper).
 /// The endpoint is configurable because image support is provider-dependent (see HuggingFaceOptions.ImageEndpoint).
 /// </summary>
 public sealed class HuggingFaceImageService(HttpClient http, IOptions<HuggingFaceOptions> options) : IImageService
@@ -33,8 +35,20 @@ public sealed class HuggingFaceImageService(HttpClient http, IOptions<HuggingFac
         using var response = await http.SendAsync(request, cts.Token);
         await HfHttp.EnsureSuccessAsync(response, cts.Token);
 
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+
+        // Some providers (e.g. FLUX via fal-ai) return JSON with a URL rather than the image bytes.
+        if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
+        {
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
+            var imageUrl = MediaUrlExtractor.TryExtract(json)
+                ?? throw new InvalidOperationException("Image URL not found in provider response.");
+            var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
+            var (bytesFromUrl, refetchedType) = await MediaRefetch.FetchAsync(http, imageUrl, allowed, cts.Token);
+            return new GeneratedMedia(bytesFromUrl, string.IsNullOrEmpty(refetchedType) ? "image/png" : refetchedType);
+        }
+
         var bytes = await response.Content.ReadAsByteArrayAsync(cts.Token);
-        var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
-        return new GeneratedMedia(bytes, contentType);
+        return new GeneratedMedia(bytes, string.IsNullOrEmpty(contentType) ? "image/png" : contentType);
     }
 }

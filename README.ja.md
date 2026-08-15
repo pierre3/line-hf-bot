@@ -84,6 +84,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE チャネルの資格情報（必須） |
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
+| `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 
 ## Docker Hub へ公開

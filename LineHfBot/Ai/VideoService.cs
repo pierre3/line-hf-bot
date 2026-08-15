@@ -1,6 +1,5 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using LineHfBot.Configuration;
 using LineHfBot.Media;
 using Microsoft.Extensions.Options;
@@ -15,7 +14,8 @@ public interface IVideoService
 
 /// <summary>
 /// Calls the HF text-to-video endpoint. Handles both response styles:
-/// raw video bytes, or a JSON body that contains a URL to the generated video (which is then fetched).
+/// raw video bytes, or a JSON body that contains a URL to the generated video (re-fetched
+/// through the shared SSRF-guarded helper).
 /// The endpoint is configurable because video support is provider-dependent.
 /// </summary>
 public sealed class HuggingFaceVideoService(HttpClient http, IOptions<HuggingFaceOptions> options) : IVideoService
@@ -41,45 +41,14 @@ public sealed class HuggingFaceVideoService(HttpClient http, IOptions<HuggingFac
         if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
         {
             var json = await response.Content.ReadAsStringAsync(cts.Token);
-            var videoUrl = ExtractVideoUrl(json)
+            var videoUrl = MediaUrlExtractor.TryExtract(json)
                 ?? throw new InvalidOperationException("Video URL not found in provider response.");
-            var bytesFromUrl = await http.GetByteArrayAsync(videoUrl, cts.Token);
-            return new GeneratedMedia(bytesFromUrl, "video/mp4");
+            var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
+            var (bytesFromUrl, refetchedType) = await MediaRefetch.FetchAsync(http, videoUrl, allowed, cts.Token);
+            return new GeneratedMedia(bytesFromUrl, string.IsNullOrEmpty(refetchedType) ? "video/mp4" : refetchedType);
         }
 
         var bytes = await response.Content.ReadAsByteArrayAsync(cts.Token);
         return new GeneratedMedia(bytes, string.IsNullOrEmpty(contentType) ? "video/mp4" : contentType);
-    }
-
-    /// <summary>Best-effort extraction of a video URL from common provider JSON shapes.</summary>
-    private static string? ExtractVideoUrl(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-        if (root.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        if (root.TryGetProperty("url", out var u) && u.ValueKind == JsonValueKind.String)
-        {
-            return u.GetString();
-        }
-        if (root.TryGetProperty("output", out var o) && o.ValueKind == JsonValueKind.String)
-        {
-            return o.GetString();
-        }
-        if (root.TryGetProperty("video", out var v))
-        {
-            if (v.ValueKind == JsonValueKind.String)
-            {
-                return v.GetString();
-            }
-            if (v.ValueKind == JsonValueKind.Object && v.TryGetProperty("url", out var vu) && vu.ValueKind == JsonValueKind.String)
-            {
-                return vu.GetString();
-            }
-        }
-        return null;
     }
 }

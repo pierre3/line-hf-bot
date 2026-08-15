@@ -84,6 +84,7 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE channel credentials (required) |
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
+| `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 
 ## Publish to Docker Hub
