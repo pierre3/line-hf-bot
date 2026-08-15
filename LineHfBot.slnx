@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="LineHfBot/LineHfBot.csproj" />
+  <Project Path="LineHfBot.Tests/LineHfBot.Tests.csproj" />
 </Solution>
