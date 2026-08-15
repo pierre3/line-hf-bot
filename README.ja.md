@@ -2,7 +2,7 @@
 
 [English](README.md) | 日本語
 
-Hugging Face のモデルを使って、LINE で **AI チャットと画像生成**ができるボットです（動画は予定）。
+Hugging Face のモデルを使って、LINE で **AI チャット・画像生成・画像編集**ができるボットです（動画は予定）。
 ASP.NET（.NET 10）で作っています。手元の PC で Docker イメージを動かし、トンネルで公開して
 LINE につなぐだけ、という手軽さを目指しています。もちろんクラウドに置いても動きます。
 
@@ -71,11 +71,14 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 ## コマンド
 | 入力 | 動作 |
 | --- | --- |
-| 通常のテキスト | AI がチャットで返信 |
+| 通常のテキスト | 現在モード（チャット / 画像 / 動画）で解釈 |
+| 写真 | 「どう編集しますか？」と聞かれ、次のメッセージで編集（image-to-image） |
 | `/image 説明` | 画像を生成 |
 | `/video 説明` | 既定では無効（`App:VideoEnabled` 参照） |
-| `/reset` | 会話履歴を消す |
+| `/reset` | 会話履歴を消し、モードを既定に戻す |
 | `/help` | 使い方を表示 |
+
+スラッシュコマンドはモードを変えずにどのモードでも使えます。画像結果には 🔄 再生成 ／ ✏️ 編集 ／ 💬 チャットへ ボタンが付きます。
 
 ## 設定
 設定はすべて環境変数（`セクション__キー`）です。全一覧は [`.env.example`](.env.example) を参照。主なもの:
@@ -89,6 +92,9 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `HuggingFace__ImageEditModel` | ✏️編集ボタンの image-to-image モデル（既定 `Qwen/Qwen-Image-Edit`） |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
+| `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |
+| `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
+| `App__VideoEnabled` | プロバイダ統合後に `/video` を有効化（既定 `false`） |
 
 ## Docker Hub へ公開
 ```bash
@@ -105,8 +111,8 @@ docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot
 - Hugging Face Inference Providers（画像・動画）
 
 ## ドキュメント
-- 仕様: [`docs/specs/01-line-hf-bot.md`](docs/specs/01-line-hf-bot.md)
-- レビュー記録: [`docs/reviews/`](docs/reviews/)
+- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集
+- レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
 
 ## ライセンス
