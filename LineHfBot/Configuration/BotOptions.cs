@@ -37,6 +37,13 @@ public sealed class HuggingFaceOptions
     /// containing a video URL (both are handled).
     /// </summary>
     public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+
+    /// <summary>
+    /// Hosts allowed when re-fetching media from a provider-supplied URL (JSON-URL responses).
+    /// Shared by the image and video paths. Separated by ";" / "," / whitespace; label-boundary match
+    /// (e.g. "fal.media" allows "cdn.fal.media" but not "evilfal.media"). Empty = deny all (fail-closed).
+    /// </summary>
+    public string MediaRefetchAllowedHosts { get; set; } = "fal.media;replicate.delivery";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;
@@ -58,6 +65,17 @@ public sealed class AppOptions
     /// integration (async job APIs), so the scaffold ships disabled until a provider is wired.
     /// </summary>
     public bool VideoEnabled { get; set; }
+
+    /// <summary>
+    /// UI language for user-facing text and the rich menu images ("en" or "ja").
+    /// English is the default for the published image; set to "ja" for Japanese.
+    /// </summary>
+    public string Locale { get; set; } = "en";
+
+    /// <summary>
+    /// Provision the mode-switcher rich menu on startup (idempotent). Disable to run without a rich menu.
+    /// </summary>
+    public bool RichMenuEnabled { get; set; } = true;
 }
 
 /// <summary>Background queue settings (section: "Queue").</summary>

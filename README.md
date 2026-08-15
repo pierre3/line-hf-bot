@@ -8,9 +8,15 @@ expose it through a tunnel, and connect it to LINE. It can also be hosted in the
 
 ## Features
 - 💬 **Chat** with conversation history (Semantic Kernel + Hugging Face)
-- 🎨 **Image generation** — `/image <prompt>` (served back to LINE from the app)
+- 🎨 **Image generation** — `/image <prompt>`, or switch to Image mode and just send a description
 - 🎬 Video generation — scaffolded but **off by default** (`App:VideoEnabled`); needs a video provider integration
+- 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
+  interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate and 💬 Chat.
+- 🌐 **English by default, Japanese available** (`App:Locale` = `en`/`ja`); user-facing text and the rich menu follow it
 - 🐳 Ships as a Docker image; run locally with a tunnel, or host in the cloud
+
+Slash commands (`/image`, `/video`, `/reset`, `/help`) always work regardless of mode. The rich menu is
+provisioned automatically on startup; set `App:RichMenuEnabled=false` to run without it.
 
 ## How it works
 ```
@@ -78,6 +84,7 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE channel credentials (required) |
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
+| `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 
 ## Publish to Docker Hub

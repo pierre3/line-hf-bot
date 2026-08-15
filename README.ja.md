@@ -8,9 +8,15 @@ LINE につなぐだけ、という手軽さを目指しています。もちろ
 
 ## できること
 - 💬 **チャット**（会話の流れを覚える。Semantic Kernel + Hugging Face）
-- 🎨 **画像生成** — `/image 説明`（アプリが画像を LINE に配信）
+- 🎨 **画像生成** — `/image 説明`、または画像モードに切り替えて説明を送るだけ
 - 🎬 動画生成 — 実装の骨組みはあるが**既定オフ**（`App:VideoEnabled`）。動画プロバイダ統合が必要
+- 🎛️ **モード切替リッチメニュー** — 下部メニューで チャット / 画像 / 動画 を切替。素のメッセージは
+  現在モードで解釈されるのでプレフィックス不要。画像結果には 🔄 再生成 ／ 💬 チャットへ ボタン
+- 🌐 **英語デフォルト・日本語対応**（`App:Locale` = `en`/`ja`）。ユーザー向け文言とリッチメニューが追従
 - 🐳 Docker イメージとして配布。ローカル＋トンネルで手軽に、クラウド運用も可能
+
+スラッシュコマンド（`/image`・`/video`・`/reset`・`/help`）はモードに関係なく常に使えます。リッチメニューは
+起動時に自動作成されます（`App:RichMenuEnabled=false` で無効化）。
 
 ## しくみ
 ```
@@ -78,6 +84,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE チャネルの資格情報（必須） |
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
+| `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 
 ## Docker Hub へ公開

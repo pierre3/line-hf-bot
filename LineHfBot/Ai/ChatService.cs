@@ -18,14 +18,12 @@ public interface IChatService
 public sealed class HuggingFaceChatService(
     IChatCompletionService chat,
     ChatHistoryStore store,
+    UserMessages messages,
     IOptions<HuggingFaceOptions> options) : IChatService
 {
-    // Assistant persona. Product content shown indirectly to users, so kept in Japanese.
-    private const string SystemPrompt = "あなたは親切で丁寧な日本語のアシスタントです。分かりやすく簡潔に答えてください。";
-
     public async Task<string> CompleteAsync(string userId, string userText, CancellationToken cancellationToken)
     {
-        var history = store.Build(userId, SystemPrompt, userText);
+        var history = store.Build(userId, messages.SystemPrompt, userText);
 
         // Bound the HF call so a slow/cold model does not tie up a worker indefinitely.
         var timeout = Math.Max(5, options.Value.ChatTimeoutSeconds);
@@ -40,12 +38,12 @@ public sealed class HuggingFaceChatService(
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            return UserMessages.Timeout;
+            return messages.Timeout;
         }
 
         if (string.IsNullOrWhiteSpace(answer))
         {
-            return UserMessages.EmptyAnswer;
+            return messages.EmptyAnswer;
         }
 
         store.Append(userId, userText, answer);

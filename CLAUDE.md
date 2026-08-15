@@ -13,11 +13,12 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   - 送信: `MessagingClient.CreateWithStaticToken(token)` → Reply / Push
   - 制約: 画像・動画メッセージは**公開 HTTPS URL 必須**（生バイト不可）→ 生成物は `/media/{id}` で自前配信
 - **Semantic Kernel**: `Microsoft.SemanticKernel.Connectors.HuggingFace`（チャット）。画像/動画は HF Inference Providers を `HttpClient` で呼び、**SK KernelFunction/Plugin としてラップ**
-- **HF Inference**: text-to-image / text-to-video は `{"inputs","parameters"}` を POST → **生メディアバイト**。認証 `Bearer hf_***`。router `https://router.huggingface.co/hf-inference/models/{modelId}`
+- **HF Inference**: text-to-image / text-to-video は `{"inputs"}` を POST。応答は**生メディアバイト**または **JSON(URL)** の両対応（実行時に Content-Type で判定し、JSON なら URL を SSRF ガード付きで自前再取得＝`MediaRefetchAllowedHosts`）。認証 `Bearer hf_***`。router `https://router.huggingface.co/hf-inference/models/{modelId}`
 
 ## アーキテクチャ要点
 - webhook は署名検証後**即 200**。生成は `System.Threading.Channels` + `BackgroundService` で非同期処理し、完了後に **Push API** で送信（reply トークンは短命なため）。
-- モード切替: 通常テキスト=チャット、`/image <prompt>`・`/video <prompt>`・`/reset`・`/help`。結果に **QuickReply** を付与。
+- モード状態: per-user に現在モード（chat/image/video）をメモリ保持し、**素メッセージを現在モードで解釈**（既定 chat）。`/image`・`/video`・`/reset`・`/help` は明示上書き。モード切替は**リッチメニュー**（起動時に冪等 provisioning、alias で `richmenuswitch`）。
+- 画像結果に **QuickReply**（`🔄 再生成`／`💬 チャットへ`。`✏️ 編集`は image-to-image=3b で追加）。動画結果は `💬 チャットへ`。ボタンは postback で `MessageDispatcher` が処理。
 - 生成メディアは **メモリ内 TTL キャッシュ**（既定10分、`IMemoryCache`）で保持し `/media/{id}` 配信。
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
 
@@ -28,8 +29,10 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
   `HuggingFace__VideoEndpoint`(text-to-video。`{model}` を VideoModel で置換。プロバイダ依存。バイト or JSON(URL) 両対応),
+  `HuggingFace__MediaRefetchAllowedHosts`(既定 `fal.media;replicate.delivery`。JSON-URL 応答の再取得を許可するホスト。画像・動画共通。ラベル境界一致・**空なら全拒否**),
   `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
-- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ)
+- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ),
+  `App__Locale`(ユーザー向け文言＋リッチメニューの言語。既定 `en`、`ja` 可), `App__RichMenuEnabled`(既定 true。起動時のリッチメニュー provisioning)
 - `Queue__Capacity`(100), `Queue__Workers`(2)
 - `Chat__MaxHistory`(20)
 
@@ -63,7 +66,7 @@ docker build -t line-hf-bot . / docker compose up
 - 秘密情報をログ・コミットに出さない。
 
 ### 言語ルール
-- **コメント・ログは英語**（開発者/運用向け）。**エンドユーザー向けの文言（LINE 返信など）は日本語**。
+- **コメント・ログは英語**（開発者/運用向け）。**エンドユーザー向けの文言（LINE 返信など）は `App__Locale` 依存**（配布既定 `en`／`ja` 切替可）。文言は `Text/UserMessages.cs` に en/ja を集約。
 - **公開ドキュメントは英語を既定**とし、**日本語版も用意**（`README.md`＝英語 / `README.ja.md`＝日本語）。
   `docs/specs`・`docs/reviews` は内部作業ドキュメントとして日本語で運用。
 - 日本語は翻訳調・AI 生成臭を避け、平易で自然な文章にする。
