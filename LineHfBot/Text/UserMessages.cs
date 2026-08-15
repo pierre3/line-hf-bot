@@ -39,6 +39,12 @@ public sealed class UserMessages
     public string EditNoImage => _s.EditNoImage;
     public string EditImageExpired => _s.EditImageExpired;
 
+    // User-sent image received for editing (spec 04)
+    public string ImageReceived => _s.ImageReceived;
+    public string ImageReceiveFailed => _s.ImageReceiveFailed;
+    public string ImageTooLarge => _s.ImageTooLarge;
+    public string ImageSourceUnsupported => _s.ImageSourceUnsupported;
+
     // Quick reply button labels
     public string LabelRegenerate => _s.LabelRegenerate;
     public string LabelEdit => _s.LabelEdit;
@@ -67,6 +73,10 @@ public sealed class UserMessages
         string EditingImage,
         string EditNoImage,
         string EditImageExpired,
+        string ImageReceived,
+        string ImageReceiveFailed,
+        string ImageTooLarge,
+        string ImageSourceUnsupported,
         string LabelRegenerate,
         string LabelEdit,
         string LabelBackToChat,
@@ -79,6 +89,7 @@ public sealed class UserMessages
             "・Use the menu at the bottom to switch mode (Chat / Image / Video)\n" +
             "・In Image mode, send a description to generate an image\n" +
             "・After an image, tap 🔄 to regenerate or ✏️ to edit it\n" +
+            "・Send a photo to edit it with a text instruction\n" +
             "・/image <text> … make an image\n" +
             "・/video <text> … make a video\n" +
             "・/reset … clear the conversation\n" +
@@ -101,6 +112,10 @@ public sealed class UserMessages
         EditingImage: "Editing your image… please wait ✏️",
         EditNoImage: "Make an image first, then you can edit it.",
         EditImageExpired: "That image is no longer available. Please make a new one and try again.",
+        ImageReceived: "Got your image. How should I edit it? e.g. make the background a night sky",
+        ImageReceiveFailed: "I couldn't get that image. Please try sending it again.",
+        ImageTooLarge: "That image is too large. Please send a smaller one.",
+        ImageSourceUnsupported: "I can't use that image. Please send a photo from your device.",
         LabelRegenerate: "🔄 Regenerate",
         LabelEdit: "✏️ Edit",
         LabelBackToChat: "💬 Chat",
@@ -113,6 +128,7 @@ public sealed class UserMessages
             "・下のメニューでモード（チャット / 画像 / 動画）を切り替えられます\n" +
             "・画像モードでは、説明を送ると画像を作ります\n" +
             "・画像のあとは 🔄 で作り直し、✏️ で編集できます\n" +
+            "・写真を送ると、その画像を文章の指示で編集できます\n" +
             "・/image 説明 … 画像を作ります\n" +
             "・/video 説明 … 動画を作ります\n" +
             "・/reset … 会話の履歴を消します\n" +
@@ -135,6 +151,10 @@ public sealed class UserMessages
         EditingImage: "画像を編集しています…少しお待ちください ✏️",
         EditNoImage: "先に画像を作ってください。作ったあとに編集できます。",
         EditImageExpired: "その画像はもう使えません。もう一度作ってから試してください。",
+        ImageReceived: "画像を受け取りました。どう編集しますか？例: 背景を夜空に",
+        ImageReceiveFailed: "画像を取得できませんでした。もう一度送ってください。",
+        ImageTooLarge: "画像が大きすぎます。小さいものを送ってください。",
+        ImageSourceUnsupported: "この画像は使えません。端末内の写真を送ってください。",
         LabelRegenerate: "🔄 再生成",
         LabelEdit: "✏️ 編集",
         LabelBackToChat: "💬 チャットへ",

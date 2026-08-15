@@ -12,6 +12,7 @@ expose it through a tunnel, and connect it to LINE. It can also be hosted in the
 - 🎬 Video generation — scaffolded but **off by default** (`App:VideoEnabled`); needs a video provider integration
 - 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
   interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate, ✏️ Edit (image-to-image), and 💬 Chat.
+- 🖼️ **Edit your own photo** — send a photo and the bot asks how to edit it; your next message is applied via image-to-image
 - 🌐 **English by default, Japanese available** (`App:Locale` = `en`/`ja`); user-facing text and the rich menu follow it
 - 🐳 Ships as a Docker image; run locally with a tunnel, or host in the cloud
 
@@ -82,6 +83,7 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | Variable | Notes |
 | --- | --- |
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE channel credentials (required) |
+| `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | limits for downloading a user-sent image to edit (default 10 MB / 30 s) |
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
 | `HuggingFace__ImageEditModel` | image-to-image model for the ✏️ edit button (default `Qwen/Qwen-Image-Edit`) |

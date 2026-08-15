@@ -1,6 +1,6 @@
 # 仕様: ユーザー画像の受信 → 画像編集（image-to-image）
 
-- 状態: 仕様ゲート PASS（記録 `docs/reviews/25`。初回 FAIL=Blocker1/Minor4 → 反映 → 再判定 PASS）。実装フェーズ着手可
+- 状態: 実装済み（仕様ゲート PASS=記録 `docs/reviews/25`。実装/セキュリティ/ドキュメントゲート予定）。テスト53件緑（既存45＋新規8）
 - 対象: 拡張フェーズ / ユーザーが送った写真を編集の入力にする（受信画像 → ✏️編集フローへ接続）
 - 関連: `docs/specs/03-mode-context-richmenu.md`（3b ✏️編集＝image-to-image を再利用）、`docs/specs/02-image-provider-integration.md`（応答分岐は編集側で既に利用済み）
 - 依存: **spec 02 / spec 03(3a・3b) 実装済み（main マージ済み）を前提**。本仕様は 3b の編集フローに「入力画像の入手経路」を足すもの。

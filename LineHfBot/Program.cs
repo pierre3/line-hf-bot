@@ -44,6 +44,7 @@ builder.Services.AddSingleton<ChatHistoryStore>();
 builder.Services.AddSingleton<UserStateStore>();
 builder.Services.AddSingleton<IChatService, HuggingFaceChatService>();
 builder.Services.AddSingleton<ILineMessenger, LineMessenger>();
+builder.Services.AddSingleton<ILineContentService, LineContentService>();
 builder.Services.AddSingleton<QuickReplyFactory>();
 builder.Services.AddSingleton<RichMenuManager>();
 builder.Services.AddSingleton<MediaStore>();

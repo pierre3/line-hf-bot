@@ -19,6 +19,7 @@ public sealed class WorkProcessor(
     IImageService imageService,
     IImageEditService imageEditService,
     IVideoService videoService,
+    ILineContentService lineContent,
     ChatHistoryStore history,
     UserStateStore userState,
     MediaStore mediaStore,
@@ -51,6 +52,9 @@ public sealed class WorkProcessor(
                     break;
                 case WorkKind.ImageEdit:
                     await HandleImageEditAsync(item, cancellationToken);
+                    break;
+                case WorkKind.ReceiveImage:
+                    await HandleReceiveImageAsync(item, cancellationToken);
                     break;
                 case WorkKind.Video:
                     if (appOptions.Value.VideoEnabled)
@@ -111,6 +115,43 @@ public sealed class WorkProcessor(
         userState.SetLastImageId(item.UserId, id);
         var url = $"{baseUrl}/media/{id}";
         await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, quickReplies.ImageResult);
+    }
+
+    /// <summary>
+    /// A user sent a photo (item.Text = LINE messageId): download it, store it in the media cache, and
+    /// make it the working image for editing (LastImageId + AwaitingEdit, atomically), then ask how to
+    /// edit it. The next plain text is handled by the existing edit flow. No PublicBaseUrl is needed
+    /// here — the image is only re-served when an edited result is produced.
+    /// </summary>
+    private async Task HandleReceiveImageAsync(WorkItem item, CancellationToken cancellationToken)
+    {
+        // Idempotency: LINE may redeliver webhooks; do not download/store the same image twice.
+        if (!processedEvents.TryMarkNew(item.WebhookEventId))
+        {
+            logger.LogInformation("Duplicate ReceiveImage event skipped: eventId={EventId}", item.WebhookEventId);
+            return;
+        }
+
+        GeneratedMedia media;
+        try
+        {
+            media = await lineContent.FetchImageAsync(item.Text, cancellationToken);
+        }
+        catch (ImageTooLargeException)
+        {
+            await SendAsync(item, messages.ImageTooLarge, cancellationToken);
+            return;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to fetch user image: user={User} messageId={MessageId}", item.UserId, item.Text);
+            await SendAsync(item, messages.ImageReceiveFailed, cancellationToken);
+            return;
+        }
+
+        var id = mediaStore.Save(media);
+        userState.SetReceivedImage(item.UserId, id);
+        await SendAsync(item, messages.ImageReceived, cancellationToken);
     }
 
     private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)

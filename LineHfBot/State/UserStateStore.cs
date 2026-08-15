@@ -74,6 +74,23 @@ public sealed class UserStateStore
         }
     }
 
+    /// <summary>
+    /// Record a user-sent image as the working image and arm the edit flow in one atomic update:
+    /// LastImageId = the stored media id, LastPrompt cleared (regenerate has no prompt to reuse),
+    /// and AwaitingEdit = true so the next plain text is taken as the edit instruction. Single lock
+    /// so a concurrent worker never sees a half-updated state.
+    /// </summary>
+    public void SetReceivedImage(string userId, string imageId)
+    {
+        var s = _byUser.GetOrAdd(userId, static _ => new UserState());
+        lock (s)
+        {
+            s.LastImageId = imageId;
+            s.LastPrompt = null;
+            s.AwaitingEdit = true;
+        }
+    }
+
     /// <summary>Set/clear the "next text is an edit instruction" flag (used by 3b image editing).</summary>
     public void SetAwaitingEdit(string userId, bool awaiting)
     {

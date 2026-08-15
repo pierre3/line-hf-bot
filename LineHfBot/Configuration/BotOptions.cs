@@ -1,11 +1,20 @@
 namespace LineHfBot.Configuration;
 
-/// <summary>LINE Messaging API credentials (section: "Line"). Secret; supply via configuration/environment.</summary>
+/// <summary>
+/// LINE Messaging API settings (section: "Line"): credentials (secret; supply via
+/// configuration/environment) plus constraints for fetching user-sent image content.
+/// </summary>
 public sealed class LineOptions
 {
     public const string Section = "Line";
     public string ChannelSecret { get; set; } = "";
     public string ChannelAccessToken { get; set; } = "";
+
+    /// <summary>Maximum bytes to download for a user-sent image (via the Content API). Larger images are rejected.</summary>
+    public long MaxIncomingImageBytes { get; set; } = 10 * 1024 * 1024;
+
+    /// <summary>Timeout (seconds) for fetching user-sent image content from the LINE Content API.</summary>
+    public int ContentFetchTimeoutSeconds { get; set; } = 30;
 }
 
 /// <summary>Hugging Face settings (section: "HuggingFace").</summary>
