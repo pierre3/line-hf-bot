@@ -39,22 +39,33 @@ public sealed class LineContentService(MessagingClient client, IOptions<LineOpti
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
 
-        // GET /v2/bot/message/{messageId}/content on the blob (data) plane -> raw stream.
-        await using var stream = await client.Blob.V2.Bot.Message[messageId].Content.GetAsync(
-            cancellationToken: cts.Token);
-        if (stream is null)
+        try
         {
-            throw new InvalidOperationException($"LINE returned no content for messageId {messageId}.");
-        }
+            // GET /v2/bot/message/{messageId}/content on the blob (data) plane -> raw stream.
+            await using var stream = await client.Blob.V2.Bot.Message[messageId].Content.GetAsync(
+                cancellationToken: cts.Token);
+            if (stream is null)
+            {
+                throw new InvalidOperationException($"LINE returned no content for messageId {messageId}.");
+            }
 
-        var bytes = await ReadCappedAsync(stream, opts.MaxIncomingImageBytes, cts.Token);
-        if (bytes is null)
+            var bytes = await ReadCappedAsync(stream, opts.MaxIncomingImageBytes, cts.Token);
+            if (bytes is null)
+            {
+                logger.LogWarning("User image exceeds cap ({Max} bytes); rejected.", opts.MaxIncomingImageBytes);
+                throw new ImageTooLargeException(opts.MaxIncomingImageBytes);
+            }
+
+            return new GeneratedMedia(bytes, DefaultContentType);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning("User image exceeds cap ({Max} bytes); rejected.", opts.MaxIncomingImageBytes);
-            throw new ImageTooLargeException(opts.MaxIncomingImageBytes);
+            // Our own fetch timeout fired (not app shutdown): surface as a non-cancellation failure so the
+            // caller notifies the user, instead of it bubbling up as an OperationCanceledException and being
+            // swallowed by the worker's OCE-excluding catch.
+            logger.LogWarning("User image fetch timed out after {Timeout}s.", timeout.TotalSeconds);
+            throw new TimeoutException($"LINE content fetch timed out after {timeout.TotalSeconds}s.");
         }
-
-        return new GeneratedMedia(bytes, DefaultContentType);
     }
 
     /// <summary>
