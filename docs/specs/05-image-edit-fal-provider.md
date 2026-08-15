@@ -1,6 +1,6 @@
 # 仕様: 画像編集（image-to-image）を fal-ai プロバイダ経由に対応
 
-- 状態: 実装済み・実機E2E検証済み（`/dev/imageedit` で SD3生成→fal編集→有効PNG 1.45MB を確認）。ゲート予定
+- 状態: 実装済み・実機E2E検証済み（`/dev/imageedit` で SD3生成→fal編集→有効PNG 1.45MB を確認）。3ゲート全PASS（実装=30 / セキュリティ=31 / ドキュメント=32）
 - 対象: 既存 3b の画像編集（`ImageEditService`）を、実際に動くプロバイダ（fal-ai）へ接続
 - 関連: `docs/specs/03-mode-context-richmenu.md`（3b ✏️編集）、`docs/specs/04-user-image-edit.md`（受信写真→編集）、`docs/specs/02-image-provider-integration.md`（SSRF allowlist / MediaRefetch 流用）
 - 背景: 既定の `hf-inference` は **image-to-image を提供しておらず**、`Qwen/Qwen-Image-Edit` 呼び出しが `HF 400 {"error":"Model not supported by provider hf-inference"}` で失敗（実機ログで確認）。HF Inference Providers では image-to-image は **fal-ai / replicate / wavespeed** が提供。
