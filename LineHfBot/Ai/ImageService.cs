@@ -35,20 +35,8 @@ public sealed class HuggingFaceImageService(HttpClient http, IOptions<HuggingFac
         using var response = await http.SendAsync(request, cts.Token);
         await HfHttp.EnsureSuccessAsync(response, cts.Token);
 
-        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
-
         // Some providers (e.g. FLUX via fal-ai) return JSON with a URL rather than the image bytes.
-        if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
-        {
-            var json = await response.Content.ReadAsStringAsync(cts.Token);
-            var imageUrl = MediaUrlExtractor.TryExtract(json)
-                ?? throw new InvalidOperationException("Image URL not found in provider response.");
-            var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
-            var (bytesFromUrl, refetchedType) = await MediaRefetch.FetchAsync(http, imageUrl, allowed, cts.Token);
-            return new GeneratedMedia(bytesFromUrl, string.IsNullOrEmpty(refetchedType) ? "image/png" : refetchedType);
-        }
-
-        var bytes = await response.Content.ReadAsByteArrayAsync(cts.Token);
-        return new GeneratedMedia(bytes, string.IsNullOrEmpty(contentType) ? "image/png" : contentType);
+        var allowed = MediaRefetch.ParseHosts(opt.MediaRefetchAllowedHosts);
+        return await MediaResponse.ReadAsync(http, response, allowed, "image/png", cts.Token);
     }
 }

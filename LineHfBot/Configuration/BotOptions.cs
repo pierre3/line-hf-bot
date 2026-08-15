@@ -17,6 +17,9 @@ public sealed class HuggingFaceOptions
     public string ImageModel { get; set; } = "";
     public string VideoModel { get; set; } = "";
 
+    /// <summary>Image-to-image (edit) model. Provider-dependent; default is Qwen's instruction-following editor.</summary>
+    public string ImageEditModel { get; set; } = "Qwen/Qwen-Image-Edit";
+
     /// <summary>
     /// Chat completion base URL. Defaults to the Hugging Face router; the SK connector
     /// appends "/v1/chat/completions", so this must NOT include the "/v1" suffix.
@@ -39,6 +42,13 @@ public sealed class HuggingFaceOptions
     public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
 
     /// <summary>
+    /// Image-to-image (edit) endpoint template. "{model}" is replaced with <see cref="ImageEditModel"/>.
+    /// The reference image is sent as base64 in "inputs" with the edit instruction in "parameters.prompt".
+    /// Provider-dependent; response is raw bytes or JSON-with-URL (both handled like the image path).
+    /// </summary>
+    public string ImageEditEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+
+    /// <summary>
     /// Hosts allowed when re-fetching media from a provider-supplied URL (JSON-URL responses).
     /// Shared by the image and video paths. Separated by ";" / "," / whitespace; label-boundary match
     /// (e.g. "fal.media" allows "cdn.fal.media" but not "evilfal.media"). Empty = deny all (fail-closed).
@@ -46,6 +56,7 @@ public sealed class HuggingFaceOptions
     public string MediaRefetchAllowedHosts { get; set; } = "fal.media;replicate.delivery";
     public int ChatTimeoutSeconds { get; set; } = 60;
     public int ImageTimeoutSeconds { get; set; } = 120;
+    public int ImageEditTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;
 }
 
