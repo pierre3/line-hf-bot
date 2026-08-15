@@ -60,17 +60,23 @@ public sealed class MessageDispatcher(IWorkQueue queue, ILineMessenger messenger
 
     private static bool TryPrefix(string text, string command, out string arg)
     {
-        if (text.Equals(command, StringComparison.OrdinalIgnoreCase))
-        {
-            arg = "";
-            return true;
-        }
-        if (text.StartsWith(command + " ", StringComparison.OrdinalIgnoreCase))
-        {
-            arg = text[(command.Length + 1)..].Trim();
-            return true;
-        }
         arg = "";
-        return false;
+        if (!text.StartsWith(command, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        if (text.Length == command.Length)
+        {
+            return true; // exactly the command, no argument
+        }
+        // The separator after the command must be whitespace so "/imagex" is not treated as "/image".
+        // Accept any Unicode whitespace (e.g. the full-width space U+3000 a Japanese IME often inserts),
+        // not just an ASCII space; Trim() then strips it along with any extra leading/trailing whitespace.
+        if (!char.IsWhiteSpace(text[command.Length]))
+        {
+            return false;
+        }
+        arg = text[command.Length..].Trim();
+        return true;
     }
 }

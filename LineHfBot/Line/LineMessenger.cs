@@ -7,29 +7,29 @@ namespace LineHfBot.Line;
 public interface ILineMessenger
 {
     /// <summary>Send a text reply using the reply token. Returns false if it fails (e.g. token expired).</summary>
-    Task<bool> TryReplyTextAsync(string replyToken, string text, CancellationToken cancellationToken);
+    Task<bool> TryReplyTextAsync(string replyToken, string text, CancellationToken cancellationToken, QuickReply? quickReply = null);
 
     /// <summary>Push a text message to a user.</summary>
-    Task PushTextAsync(string userId, string text, CancellationToken cancellationToken);
+    Task PushTextAsync(string userId, string text, CancellationToken cancellationToken, QuickReply? quickReply = null);
 
     /// <summary>Push an image message (both URLs must be public HTTPS).</summary>
-    Task PushImageAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken);
+    Task PushImageAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken, QuickReply? quickReply = null);
 
     /// <summary>Push a video message (mp4 + preview image, both public HTTPS).</summary>
-    Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken);
+    Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken, QuickReply? quickReply = null);
 }
 
 /// <summary>Thin wrapper over <see cref="MessagingClient"/>.</summary>
 public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger> logger) : ILineMessenger
 {
-    public async Task<bool> TryReplyTextAsync(string replyToken, string text, CancellationToken cancellationToken)
+    public async Task<bool> TryReplyTextAsync(string replyToken, string text, CancellationToken cancellationToken, QuickReply? quickReply = null)
     {
         try
         {
             await client.Api.V2.Bot.Message.Reply.PostAsync(new ReplyMessageRequest
             {
                 ReplyToken = replyToken,
-                Messages = [new TextMessage { Type = "text", Text = text }],
+                Messages = [new TextMessage { Type = "text", Text = text, QuickReply = quickReply }],
             }, cancellationToken: cancellationToken);
             return true;
         }
@@ -40,14 +40,14 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
         }
     }
 
-    public async Task PushTextAsync(string userId, string text, CancellationToken cancellationToken)
+    public async Task PushTextAsync(string userId, string text, CancellationToken cancellationToken, QuickReply? quickReply = null)
     {
         try
         {
             await client.Api.V2.Bot.Message.Push.PostAsync(new PushMessageRequest
             {
                 To = userId,
-                Messages = [new TextMessage { Type = "text", Text = text }],
+                Messages = [new TextMessage { Type = "text", Text = text, QuickReply = quickReply }],
             }, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
@@ -57,7 +57,7 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
         }
     }
 
-    public async Task PushImageAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken)
+    public async Task PushImageAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken, QuickReply? quickReply = null)
     {
         try
         {
@@ -69,6 +69,7 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
                     Type = "image",
                     OriginalContentUrl = originalContentUrl,
                     PreviewImageUrl = previewImageUrl,
+                    QuickReply = quickReply,
                 }],
             }, cancellationToken: cancellationToken);
         }
@@ -79,7 +80,7 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
         }
     }
 
-    public async Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken)
+    public async Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken, QuickReply? quickReply = null)
     {
         try
         {
@@ -91,6 +92,7 @@ public sealed class LineMessenger(MessagingClient client, ILogger<LineMessenger>
                     Type = "video",
                     OriginalContentUrl = originalContentUrl,
                     PreviewImageUrl = previewImageUrl,
+                    QuickReply = quickReply,
                 }],
             }, cancellationToken: cancellationToken);
         }
