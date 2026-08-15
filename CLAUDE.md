@@ -19,12 +19,14 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 - webhook は署名検証後**即 200**。生成は `System.Threading.Channels` + `BackgroundService` で非同期処理し、完了後に **Push API** で送信（reply トークンは短命なため）。
 - モード状態: per-user に現在モード（chat/image/video）をメモリ保持し、**素メッセージを現在モードで解釈**（既定 chat）。`/image`・`/video`・`/reset`・`/help` は明示上書き。モード切替は**リッチメニュー**（起動時に冪等 provisioning、alias で `richmenuswitch`）。
 - 画像結果に **QuickReply**（`🔄 再生成`／`✏️ 編集`／`💬 チャットへ`）。`✏️ 編集`は次の非コマンドテキストを編集指示として **image-to-image（`Qwen/Qwen-Image-Edit`）** で処理（`AwaitingEdit`。モード切替/コマンドでキャンセル）。動画結果は `💬 チャットへ`。ボタンは postback で `MessageDispatcher` が処理。
+- **ユーザーが送った写真も編集入力にできる**（モード非依存）: 受信→LINE Content API（`MessagingClient.Blob`）で本体取得→`MediaStore` 保存→`AwaitingEdit` にして「どう編集しますか？」返信→次テキストで img2img 編集。取得は上限/タイムアウト付き、`contentProvider.type=external` は非対応（SSRF 回避で外部URLは自前取得しない）。
 - 生成メディアは **メモリ内 TTL キャッシュ**（既定10分、`IMemoryCache`）で保持し `/media/{id}` 配信。
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
 
 ## 設定（すべて環境変数 / appsettings）
 環境変数は section 区切りを `__` で表す（例: section `App` の `PublicBaseUrl` → `App__PublicBaseUrl`）。
-- `Line__ChannelSecret`, `Line__ChannelAccessToken`
+- `Line__ChannelSecret`, `Line__ChannelAccessToken`,
+  `Line__MaxIncomingImageBytes`(既定 `10485760`＝10MB。ユーザー送信画像の取得上限。超過は拒否) / `Line__ContentFetchTimeoutSeconds`(30。受信画像の Content API 取得タイムアウト)
 - `HuggingFace__ApiKey`, `HuggingFace__ChatModel` / `ImageModel` / `VideoModel`,
   `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),

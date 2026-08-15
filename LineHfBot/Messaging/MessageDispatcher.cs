@@ -29,10 +29,13 @@ public sealed class MessageDispatcher(
                 case MessageEvent { Message: TextMessageContent text } me:
                     await HandleTextAsync(me, text, cancellationToken);
                     break;
+                case MessageEvent { Message: ImageMessageContent img } ime:
+                    await HandleImageReceiveAsync(ime, img, cancellationToken);
+                    break;
                 case PostbackEvent pe:
                     await HandlePostbackAsync(pe, cancellationToken);
                     break;
-                // v1: ignore anything else (non-text messages, follow/join, etc.).
+                // v1: ignore anything else (other message types, follow/join, etc.).
             }
         }
     }
@@ -78,6 +81,39 @@ public sealed class MessageDispatcher(
             };
 
         await EnqueueOrBusyAsync(new WorkItem(kind, userId, replyToken, body, eventId), replyToken, cancellationToken);
+    }
+
+    /// <summary>
+    /// A user sent a photo. We route it into the image-edit flow: fetch + store happen in the worker
+    /// (keeping the webhook fast), which then arms AwaitingEdit and asks how to edit it. The image is
+    /// accepted regardless of the current mode (sending a photo is an unambiguous edit intent).
+    /// </summary>
+    private async Task HandleImageReceiveAsync(MessageEvent me, ImageMessageContent img, CancellationToken cancellationToken)
+    {
+        var userId = (me.Source as UserSource)?.UserId ?? "";
+        var replyToken = me.ReplyToken ?? "";
+        var eventId = me.WebhookEventId ?? "";
+
+        // External-provider images are not stored by LINE; we do not fetch arbitrary URLs (SSRF). Decline.
+        if (img.ContentProvider?.Type == ContentProvider_type.External)
+        {
+            if (!string.IsNullOrEmpty(replyToken))
+            {
+                await messenger.TryReplyTextAsync(replyToken, messages.ImageSourceUnsupported, cancellationToken);
+            }
+            return;
+        }
+
+        var messageId = img.Id ?? "";
+        if (string.IsNullOrEmpty(messageId))
+        {
+            return; // nothing to fetch
+        }
+
+        // The LINE messageId rides in Text; the worker downloads the content and stores it.
+        await EnqueueOrBusyAsync(
+            new WorkItem(WorkKind.ReceiveImage, userId, replyToken, messageId, eventId),
+            replyToken, cancellationToken);
     }
 
     private async Task HandlePostbackAsync(PostbackEvent pe, CancellationToken cancellationToken)

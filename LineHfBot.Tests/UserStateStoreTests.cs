@@ -40,6 +40,21 @@ public class UserStateStoreTests
         Assert.False(store.Get("u1").AwaitingEdit);
     }
 
+    // A user-sent image becomes the working image: id set, prompt cleared, edit armed — all at once.
+    [Fact]
+    public void SetReceivedImage_sets_id_clears_prompt_and_arms_edit()
+    {
+        var store = new UserStateStore();
+        store.SetLastImage("u1", "an old prompt", "old-img"); // pre-existing generation
+
+        store.SetReceivedImage("u1", "recv-1");
+
+        var s = store.Get("u1");
+        Assert.Equal("recv-1", s.LastImageId);
+        Assert.Null(s.LastPrompt);
+        Assert.True(s.AwaitingEdit);
+    }
+
     [Fact]
     public void Reset_clears_mode_and_image_session()
     {
