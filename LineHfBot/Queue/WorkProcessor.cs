@@ -4,6 +4,7 @@ using LineHfBot.Configuration;
 using LineHfBot.Line;
 using LineHfBot.Media;
 using LineHfBot.Text;
+using Line.OpenApi.Messaging.Generated.Api.Models;
 using Microsoft.Extensions.Options;
 
 namespace LineHfBot.Queue;
@@ -37,7 +38,7 @@ public sealed class WorkProcessor(
                     await SendAsync(item, UserMessages.Help, cancellationToken);
                     break;
                 case WorkKind.Chat:
-                    await SendAsync(item, await chat.CompleteAsync(item.UserId, item.Text, cancellationToken), cancellationToken);
+                    await SendAsync(item, await chat.CompleteAsync(item.UserId, item.Text, cancellationToken), cancellationToken, QuickReplies.Default);
                     break;
                 case WorkKind.Image:
                     await HandleImageAsync(item, cancellationToken);
@@ -73,7 +74,7 @@ public sealed class WorkProcessor(
 
         var media = await imageService.GenerateAsync(item.Text, cancellationToken);
         var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
-        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken);
+        await messenger.PushImageAsync(item.UserId, url, url, cancellationToken, QuickReplies.Default);
     }
 
     private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)
@@ -86,7 +87,7 @@ public sealed class WorkProcessor(
 
         var media = await videoService.GenerateAsync(item.Text, cancellationToken);
         var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
-        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken);
+        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken, QuickReplies.Default);
     }
 
     /// <summary>
@@ -127,17 +128,17 @@ public sealed class WorkProcessor(
     }
 
     /// <summary>Reply (free) if possible, otherwise push.</summary>
-    private async Task SendAsync(WorkItem item, string text, CancellationToken cancellationToken)
+    private async Task SendAsync(WorkItem item, string text, CancellationToken cancellationToken, QuickReply? quickReply = null)
     {
         if (!string.IsNullOrEmpty(item.ReplyToken) &&
-            await messenger.TryReplyTextAsync(item.ReplyToken, text, cancellationToken))
+            await messenger.TryReplyTextAsync(item.ReplyToken, text, cancellationToken, quickReply))
         {
             return;
         }
 
         if (!string.IsNullOrEmpty(item.UserId))
         {
-            await messenger.PushTextAsync(item.UserId, text, cancellationToken);
+            await messenger.PushTextAsync(item.UserId, text, cancellationToken, quickReply);
         }
     }
 }
