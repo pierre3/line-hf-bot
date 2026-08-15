@@ -1,6 +1,6 @@
 # 仕様: ユーザー画像の受信 → 画像編集（image-to-image）
 
-- 状態: 実装済み（仕様ゲート PASS=記録 `docs/reviews/25`。実装/セキュリティ/ドキュメントゲート予定）。テスト53件緑（既存45＋新規8）
+- 状態: 実装済み・4ゲート全PASS（仕様=25 / 実装=26 / セキュリティ=27 / ドキュメント=28）。テスト57件緑（既存45＋新規12）
 - 対象: 拡張フェーズ / ユーザーが送った写真を編集の入力にする（受信画像 → ✏️編集フローへ接続）
 - 関連: `docs/specs/03-mode-context-richmenu.md`（3b ✏️編集＝image-to-image を再利用）、`docs/specs/02-image-provider-integration.md`（応答分岐は編集側で既に利用済み）
 - 依存: **spec 02 / spec 03(3a・3b) 実装済み（main マージ済み）を前提**。本仕様は 3b の編集フローに「入力画像の入手経路」を足すもの。
@@ -47,7 +47,7 @@
 - **新規 `WorkKind.ReceiveImage`** を `WorkProcessor.ProcessAsync` で処理。
 - 手順:
   1. **idempotency**: `processedEvents.TryMarkNew(WebhookEventId)`。重複配信は二重取得/保存しない。
-  2. `lineContent.FetchAsync(messageId, ct)` で本体取得。失敗（取得エラー/上限超過）は `messages.ImageReceiveFailed` / `messages.ImageTooLarge` を返し**状態変更なし**（握りつぶさない）。
+  2. `lineContent.FetchImageAsync(messageId, ct)` で本体取得。失敗（取得エラー/上限超過）は `messages.ImageReceiveFailed` / `messages.ImageTooLarge` を返し**状態変更なし**（握りつぶさない）。
   3. `mediaStore.Save(media)` で保存し media id を得る。
   4. **`userState.SetReceivedImage(userId, id)`（新規・原子的）**: `LastImageId=id` / `LastPrompt=null`（🔄再生成が無関係な旧promptで走らないようクリア）/ `AwaitingEdit=true` を**1ロックで一括更新**（worker 並列時の 2 段更新レース回避）。
   5. `messages.ImageReceived`（「画像を受け取りました。どう編集しますか？ 例:…」）を返信（reply トークン→失敗時 push、既存 `SendAsync` 準拠）。
