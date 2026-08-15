@@ -113,8 +113,7 @@ docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
 ## Documentation
 - Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
-- Contributor and architecture notes: [`CLAUDE.md`](CLAUDE.md)
-- Developer guide: [`CLAUDE.md`](CLAUDE.md)
+- Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)
 
 ## License
 Not decided yet.
