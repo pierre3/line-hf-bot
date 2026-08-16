@@ -2,14 +2,14 @@
 
 English | [日本語](README.ja.md)
 
-A LINE bot that uses Hugging Face models for **AI chat, image generation, and image editing** (video is planned).
+A LINE bot that uses Hugging Face models for **AI chat, image generation, image editing, and video generation**.
 Built on ASP.NET (.NET 10). The aim is to keep it easy to run: start the Docker image on your PC,
 expose it through a tunnel, and connect it to LINE. It can also be hosted in the cloud.
 
 ## Features
 - 💬 **Chat** with conversation history (Semantic Kernel + Hugging Face)
 - 🎨 **Image generation** — `/image <prompt>`, or switch to Image mode and just send a description
-- 🎬 Video generation — scaffolded but **off by default** (`App:VideoEnabled`); needs a video provider integration
+- 🎬 **Video generation** — `/video <prompt>` (text-to-video) via the **fal-ai** provider. **Off by default** (`App:VideoEnabled`) because fal is **paid** and slow; set it to `true` to enable
 - 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
   interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate, ✏️ Edit (image-to-image), and 💬 Chat.
 - 🖼️ **Edit your own photo** — send a photo and the bot asks how to edit it; your next message is applied via image-to-image
@@ -74,7 +74,7 @@ Add the bot as a friend (QR code in the LINE console) and message it.
 | any text | interpreted by the current mode (chat / image / video) |
 | a photo | the bot asks how to edit it; your next message edits it (image-to-image) |
 | `/image <prompt>` | generate an image |
-| `/video <prompt>` | disabled by default (see `App:VideoEnabled`) |
+| `/video <prompt>` | generate a video (text-to-video via fal-ai); off by default, see `App:VideoEnabled` |
 | `/reset` | clear conversation history and reset mode |
 | `/help` | show usage |
 
@@ -90,11 +90,12 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | image-to-image via the **fal-ai** provider (default `fal-ai/qwen-image-edit`). hf-inference doesn't serve image-to-image; fal is a **paid** provider (needs Inference Providers credits) |
+| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | text-to-video via the **fal-ai** provider (default `fal-ai/wan/v2.2-5b/text-to-video`). hf-inference doesn't serve text-to-video; fal is **paid** and slow |
 | `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 | `App__Locale` | UI language for user-facing text and the rich menu (`en` default, or `ja`) |
 | `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
-| `App__VideoEnabled` | enable `/video` once a provider is wired (default `false`) |
+| `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is paid; default `false`) |
 
 ## Publish to Docker Hub
 ```bash
@@ -111,7 +112,7 @@ docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
 - Hugging Face Inference Providers (image / video)
 
 ## Documentation
-- Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos
+- Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
 - Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)
 

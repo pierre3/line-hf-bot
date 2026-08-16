@@ -24,7 +24,13 @@ public sealed class HuggingFaceOptions
     public string ApiKey { get; set; } = "";
     public string ChatModel { get; set; } = "";
     public string ImageModel { get; set; } = "";
-    public string VideoModel { get; set; } = "";
+
+    /// <summary>
+    /// Text-to-video model, as a provider model id. Text-to-video is not served by hf-inference, so this
+    /// defaults to the fal-ai provider id for Wan2.2-5B. Change together with <see cref="VideoEndpoint"/>
+    /// to target a different provider.
+    /// </summary>
+    public string VideoModel { get; set; } = "fal-ai/wan/v2.2-5b/text-to-video";
 
     /// <summary>
     /// Image-to-image (edit) model, as a provider model id. Image-to-image is not served by hf-inference,
@@ -48,11 +54,13 @@ public sealed class HuggingFaceOptions
     public string ImageEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
 
     /// <summary>
-    /// Text-to-video endpoint template. "{model}" is replaced with <see cref="VideoModel"/>.
-    /// Video support is provider-dependent; some providers return raw bytes, others return JSON
-    /// containing a video URL (both are handled).
+    /// Text-to-video submit endpoint template. "{model}" is replaced with <see cref="VideoModel"/>.
+    /// Defaults to the fal-ai async queue on the HF router: the service submits the job here, polls the
+    /// returned status URL, then reads the result video URL. hf-inference does not serve text-to-video,
+    /// so a GPU provider is required; changing provider means changing this template, the model id, and
+    /// possibly the request/response handling.
     /// </summary>
-    public string VideoEndpoint { get; set; } = "https://router.huggingface.co/hf-inference/models/{model}";
+    public string VideoEndpoint { get; set; } = "https://router.huggingface.co/fal-ai/{model}?_subdomain=queue";
 
     /// <summary>
     /// Image-to-image (edit) submit endpoint template. "{model}" is replaced with <see cref="ImageEditModel"/>.
@@ -86,8 +94,9 @@ public sealed class AppOptions
     public int MediaTtlMinutes { get; set; } = 10;
 
     /// <summary>
-    /// Enable the /video command. Off by default: text-to-video needs a provider-specific
-    /// integration (async job APIs), so the scaffold ships disabled until a provider is wired.
+    /// Enable the /video command. Off by default: text-to-video runs via the paid, slow fal-ai provider
+    /// (see <see cref="HuggingFaceOptions.VideoModel"/>/<see cref="HuggingFaceOptions.VideoEndpoint"/>),
+    /// so it ships as opt-in to avoid unexpected charges. Set to true once your HF token has Inference Providers credits.
     /// </summary>
     public bool VideoEnabled { get; set; }
 

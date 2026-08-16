@@ -13,13 +13,13 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   - 送信: `MessagingClient.CreateWithStaticToken(token)` → Reply / Push
   - 制約: 画像・動画メッセージは**公開 HTTPS URL 必須**（生バイト不可）→ 生成物は `/media/{id}` で自前配信
 - **Semantic Kernel**: `Microsoft.SemanticKernel.Connectors.HuggingFace`（チャット）。画像/動画は HF Inference Providers を `HttpClient` で呼び、**SK KernelFunction/Plugin としてラップ**
-- **HF Inference**: text-to-image / text-to-video は `{"inputs"}` を POST。応答は**生メディアバイト**または **JSON(URL)** の両対応（実行時に Content-Type で判定し、JSON なら URL を SSRF ガード付きで自前再取得＝`MediaRefetchAllowedHosts`）。認証 `Bearer hf_***`。router `https://router.huggingface.co/hf-inference/models/{modelId}`
+- **HF Inference**: text-to-image は `{"inputs"}` を POST し応答は**生メディアバイト**または **JSON(URL)** の両対応（実行時に Content-Type で判定、JSON なら URL を SSRF ガード付きで自前再取得＝`MediaRefetchAllowedHosts`）。認証 `Bearer hf_***`、router `https://router.huggingface.co/hf-inference/models/{modelId}`。**text-to-video は hf-inference 非対応**→ image-to-image と同じ **fal-ai 非同期キュー**（submit `{prompt}`→poll→`video.url`→SSRF 再取得。詳細は下記アーキ要点／`Ai/FalQueue.cs`）。
 
 ## アーキテクチャ要点
 - webhook は署名検証後**即 200**。生成は `System.Threading.Channels` + `BackgroundService` で非同期処理し、完了後に **Push API** で送信（reply トークンは短命なため）。
 - モード状態: per-user に現在モード（chat/image/video）をメモリ保持し、**素メッセージを現在モードで解釈**（既定 chat）。`/image`・`/video`・`/reset`・`/help` は明示上書き。モード切替は**リッチメニュー**（起動時に冪等 provisioning、alias で `richmenuswitch`）。
 - 画像結果に **QuickReply**（`🔄 再生成`／`✏️ 編集`／`💬 チャットへ`）。`✏️ 編集`は次の非コマンドテキストを編集指示として **image-to-image** で処理（`AwaitingEdit`。モード切替/コマンドでキャンセル）。動画結果は `💬 チャットへ`。ボタンは postback で `MessageDispatcher` が処理。
-  - image-to-image は **fal-ai プロバイダ経由**（hf-inference は非対応）。fal は**非同期キュー**: submit→`status_url` を router 書き換え(`queue.fal.run`→`router.huggingface.co/fal-ai/…?_subdomain=queue`)で poll→`response_url` の `images[0].url`(fal.media) を SSRF ガード取得。HF トークンは router 以外へ送らない（`queue.fal.run` 始まりのみ書き換え受理）。**fal は有料**。
+  - image-to-image / text-to-video は **fal-ai プロバイダ経由**（hf-inference は両方とも非対応）。fal は**非同期キュー**（共通ヘルパー `Ai/FalQueue.cs`）: submit→`status_url` を router 書き換え(`queue.fal.run`→`router.huggingface.co/fal-ai/…?_subdomain=queue`)で poll→`response_url` の結果 URL(fal.media) を SSRF ガード取得。結果 URL 抽出だけ task 別（編集=`images[0].url` / 動画=`video.url`）。submit body も task 別（編集=`{prompt,image_url,image_urls}` / 動画=`{prompt}`）。HF トークンは router 以外へ送らない（`queue.fal.run` 始まりのみ書き換え受理）。**fal は有料**。
 - **ユーザーが送った写真も編集入力にできる**（モード非依存）: 受信→LINE Content API（`MessagingClient.Blob`）で本体取得→`MediaStore` 保存→`AwaitingEdit` にして「どう編集しますか？」返信→次テキストで img2img 編集。取得は上限/タイムアウト付き、`contentProvider.type=external` は非対応（SSRF 回避で外部URLは自前取得しない）。
 - 生成メディアは **メモリ内 TTL キャッシュ**（既定10分、`IMemoryCache`）で保持し `/media/{id}` 配信。
 - 会話履歴は LINE userId 毎にメモリ保持（件数上限あり）。
@@ -31,11 +31,11 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
 - `HuggingFace__ApiKey`, `HuggingFace__ChatModel` / `ImageModel` / `VideoModel`,
   `HuggingFace__ChatEndpoint`(既定 `https://router.huggingface.co`。SK が `/v1/chat/completions` を付与するため `/v1` は含めない),
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
-  `HuggingFace__VideoEndpoint`(text-to-video。`{model}` を VideoModel で置換。プロバイダ依存。バイト or JSON(URL) 両対応),
+  `HuggingFace__VideoModel`(既定 `fal-ai/wan/v2.2-5b/text-to-video`。text-to-video の fal プロバイダモデルID) / `VideoEndpoint`(既定 `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue`。fal 非同期キューの submit 先。`{model}` 置換。hf-inference は text-to-video 非対応。**fal は有料**),
   `HuggingFace__ImageEditModel`(既定 `fal-ai/qwen-image-edit`。image-to-image の fal プロバイダモデルID) / `ImageEditEndpoint`(既定 `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue`。fal 非同期キューの submit 先。`{model}` 置換。**fal は有料**),
   `HuggingFace__MediaRefetchAllowedHosts`(既定 `fal.media;replicate.delivery`。JSON-URL 応答の再取得を許可するホスト。画像・動画共通。ラベル境界一致・**空なら全拒否**),
   `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `ImageEditTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300)
-- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。`/video` はプロバイダ統合が必要なため既定オフ),
+- `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。text-to-video は fal-ai 経由＝有料かつ遅いため既定オフ・opt-in。true で `/video` 有効化),
   `App__Locale`(ユーザー向け文言＋リッチメニューの言語。既定 `en`、`ja` 可), `App__RichMenuEnabled`(既定 true。起動時のリッチメニュー provisioning)
 - `Queue__Capacity`(100), `Queue__Workers`(2)
 - `Chat__MaxHistory`(20)

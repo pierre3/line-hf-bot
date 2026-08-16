@@ -103,14 +103,14 @@ public class ImageEditServiceTests
     [InlineData("https://queue.fal.run/fal-ai/qwen-image-edit/requests/x/status",
                 "https://router.huggingface.co/fal-ai/fal-ai/qwen-image-edit/requests/x/status?_subdomain=queue")]
     public void ToRouterUrl_rewrites_queue_urls(string input, string expected) =>
-        Assert.Equal(expected, HuggingFaceImageEditService.ToRouterUrl(input));
+        Assert.Equal(expected, FalQueue.ToRouterUrl(input));
 
     [Theory]
     [InlineData("https://evil.example.com/requests/x/status")]
     [InlineData("https://queue.fal.run.evil.com/x")]
     [InlineData("http://queue.fal.run/x")]
     public void ToRouterUrl_rejects_non_queue_hosts(string input) =>
-        Assert.Throws<InvalidOperationException>(() => HuggingFaceImageEditService.ToRouterUrl(input));
+        Assert.Throws<InvalidOperationException>(() => FalQueue.ToRouterUrl(input));
 
     [Fact]
     public void ImageEdit_defaults_match_docs()

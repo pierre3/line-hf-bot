@@ -2,14 +2,14 @@
 
 [English](README.md) | 日本語
 
-Hugging Face のモデルを使って、LINE で **AI チャット・画像生成・画像編集**ができるボットです（動画は予定）。
+Hugging Face のモデルを使って、LINE で **AI チャット・画像生成・画像編集・動画生成**ができるボットです。
 ASP.NET（.NET 10）で作っています。手元の PC で Docker イメージを動かし、トンネルで公開して
 LINE につなぐだけ、という手軽さを目指しています。もちろんクラウドに置いても動きます。
 
 ## できること
 - 💬 **チャット**（会話の流れを覚える。Semantic Kernel + Hugging Face）
 - 🎨 **画像生成** — `/image 説明`、または画像モードに切り替えて説明を送るだけ
-- 🎬 動画生成 — 実装の骨組みはあるが**既定オフ**（`App:VideoEnabled`）。動画プロバイダ統合が必要
+- 🎬 **動画生成** — `/video 説明`（text-to-video）を **fal-ai** プロバイダ経由で。fal は**有料**かつ生成が遅いため**既定オフ**（`App:VideoEnabled`）。`true` で有効化
 - 🎛️ **モード切替リッチメニュー** — 下部メニューで チャット / 画像 / 動画 を切替。素のメッセージは
   現在モードで解釈されるのでプレフィックス不要。画像結果には 🔄 再生成 ／ ✏️ 編集（image-to-image）／ 💬 チャットへ ボタン
 - 🖼️ **自分の写真を編集** — 写真を送ると「どう編集しますか？」と聞かれ、次のメッセージで image-to-image 編集
@@ -74,7 +74,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | 通常のテキスト | 現在モード（チャット / 画像 / 動画）で解釈 |
 | 写真 | 「どう編集しますか？」と聞かれ、次のメッセージで編集（image-to-image） |
 | `/image 説明` | 画像を生成 |
-| `/video 説明` | 既定では無効（`App:VideoEnabled` 参照） |
+| `/video 説明` | 動画を生成（text-to-video、fal-ai 経由）。既定オフ、`App:VideoEnabled` 参照 |
 | `/reset` | 会話履歴を消し、モードを既定に戻す |
 | `/help` | 使い方を表示 |
 
@@ -90,11 +90,12 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal は**有料**（Inference Providers のクレジットが必要） |
+| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal は**有料**かつ遅い |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 | `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
-| `App__VideoEnabled` | プロバイダ統合後に `/video` を有効化（既定 `false`） |
+| `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video は有料。既定 `false`） |
 
 ## Docker Hub へ公開
 ```bash
@@ -111,7 +112,7 @@ docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot
 - Hugging Face Inference Providers（画像・動画）
 
 ## ドキュメント
-- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集
+- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
 
