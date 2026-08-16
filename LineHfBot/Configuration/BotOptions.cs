@@ -94,9 +94,9 @@ public sealed class AppOptions
     public int MediaTtlMinutes { get; set; } = 10;
 
     /// <summary>
-    /// Enable the /video command. Off by default: text-to-video runs via the paid, slow fal-ai provider
+    /// Enable the /video command. Off by default: text-to-video runs via the credit-heavy, slow fal-ai provider
     /// (see <see cref="HuggingFaceOptions.VideoModel"/>/<see cref="HuggingFaceOptions.VideoEndpoint"/>),
-    /// so it ships as opt-in to avoid unexpected charges. Set to true once your HF token has Inference Providers credits.
+    /// so it ships as opt-in to avoid draining HF Inference credits unexpectedly. Set to true once your HF token has credits to spare.
     /// </summary>
     public bool VideoEnabled { get; set; }
 

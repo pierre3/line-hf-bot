@@ -13,8 +13,9 @@ Docker Hub の公開イメージを取得し、`.env` で設定して起動し�
 
 - **LINE Messaging API チャネル** — **チャネルシークレット**と長期の**チャネルアクセストークン**
   （LINE Developers コンソール → チャネル →*Messaging API* /*Basic settings*）。
-- **Inference Providers** 権限つきの **Hugging Face トークン**。画像編集と動画は**有料**の fal-ai を使うため、
-  それらには Inference Providers の**クレジット**も必要です。
+- **Inference Providers** 権限つきの **Hugging Face トークン**。すべての生成が Inference Providers の
+  **クレジット**（毎月の無料枠あり）を消費します。画像編集と動画で使う fal-ai は hf-inference より
+  1 回あたりの単価が高く、クレジットの減りが速い点に注意してください。
 - アプリの**公開 HTTPS URL**。ローカルのポートに向けたトンネル（Dev Tunnels / ngrok / Cloudflare Tunnel）か、
   HTTPS エンドポイントをくれるクラウドホスト。LINE は Webhook にも、ボットが返すメディア URL にも HTTPS を要求します。
 - **Docker**。
@@ -64,13 +65,13 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 | `HuggingFace__ChatEndpoint` | `https://router.huggingface.co` | チャットのベース URL。Semantic Kernel が `/v1/chat/completions` を付けるので `/v1` は**含めない**。 |
 | `HuggingFace__ImageModel` | `stabilityai/stable-diffusion-3-medium-diffusers` | text-to-image モデル。 |
 | `HuggingFace__ImageEndpoint` | `https://router.huggingface.co/hf-inference/models/{model}` | text-to-image エンドポイント。`{model}` が `ImageModel` に置換。 |
-| `HuggingFace__ImageEditModel` | `fal-ai/qwen-image-edit` | image-to-image（✏️ 編集）モデル。**fal-ai は有料**。 |
+| `HuggingFace__ImageEditModel` | `fal-ai/qwen-image-edit` | image-to-image（✏️ 編集）モデル。**fal-ai は 1 回あたりのクレジット単価が高い**。 |
 | `HuggingFace__ImageEditEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | 編集の fal 非同期キュー submit 先。`{model}` → `ImageEditModel`。 |
-| `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | text-to-video モデル。**fal-ai は有料**。 |
+| `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | text-to-video モデル。**fal-ai はクレジット消費が激しい**。 |
 | `HuggingFace__VideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | 動画の fal 非同期キュー submit 先。`{model}` → `VideoModel`。 |
 | `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | プロバイダ URL からメディア再取得を許可するホスト。ラベル境界一致・**空なら全拒否**。 |
 
-> **hf-inference は image-to-image / text-to-video を提供していません。** これらは有料の **fal-ai** が既定です。
+> **hf-inference は image-to-image / text-to-video を提供していません。** これらは **fal-ai**（1 回あたりの単価が高い）が既定です。
 > `VideoEndpoint`/`ImageEditEndpoint` を hf-inference に向けると
 > `400 "Model not supported by provider hf-inference"` になります。
 
@@ -78,7 +79,7 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
-| `App__VideoEnabled` | `false` | `/video` を有効化。fal の text-to-video は**有料かつ遅い**ため既定オフ。`true` で許可。 |
+| `App__VideoEnabled` | `false` | `/video` を有効化。fal の text-to-video は**クレジット消費が激しく遅い**ため既定オフ。`true` で許可。 |
 | `App__Locale` | `en` | ユーザー向け文言とリッチメニューの言語（`en` / `ja`）。 |
 | `App__RichMenuEnabled` | `true` | 起動時にモード切替リッチメニューを作成（冪等）。`false` で無し。 |
 | `App__MediaTtlMinutes` | `10` | 生成メディアをメモリに保持し `/media/{id}` で配信する時間。 |
@@ -184,8 +185,8 @@ line webhook test-endpoint          # 成功 / 200 になればOK
 1. コンソール（*Messaging API*）の QR からボットを友だち追加。
 2. 普通のメッセージを送る → **チャット**の返信が返る。
 3. `/image a cat on a skateboard` → 生成された**画像**が 🔄 / ✏️ / 💬 ボタン付きで返る。
-4. **✏️ 編集**をタップ（または写真を送る）→ 編集指示を送る → **編集後の画像**（有料 fal-ai）。
-5. 任意: `App__VideoEnabled=true` なら `/video 走る猫` → **動画**（fal-ai、有料かつ遅い）。
+4. **✏️ 編集**をタップ（または写真を送る）→ 編集指示を送る → **編集後の画像**（fal-ai、クレジット消費大）。
+5. 任意: `App__VideoEnabled=true` なら `/video 走る猫` → **動画**（fal-ai、クレジット消費が激しく遅い）。
 
 ---
 
@@ -210,7 +211,7 @@ docker compose pull && docker compose up -d
 | Webhook テストが失敗 | `App__PublicBaseUrl`／Webhook URL が HTTPS でない・到達できない／コンテナ未起動 |
 | チャットは返るが画像が出ない | `App__PublicBaseUrl` が誤り or 外部到達不可（LINE が `/media/{id}` を取得できない） |
 | 編集／動画で `400 "Model not supported by provider hf-inference"` | `ImageEditEndpoint`/`VideoEndpoint`（またはモデルID）が hf-inference を指している。上記の fal-ai 既定を使う |
-| 編集／動画でその他の「エラー」 | HF トークンに Inference Providers 権限または**クレジット**がない（fal-ai は有料） |
+| 編集／動画でその他の「エラー」 | HF トークンに Inference Providers 権限がない、または**クレジット切れ**（fal-ai は消費が速い） |
 | リッチメニューが出ない | `App__RichMenuEnabled=false`、またはトークンにリッチメニュー権限がない |
 
 実際のエラーはコンテナログで確認できます: `docker logs line-hf-bot`（`Failed to handle item ...` を探す）。

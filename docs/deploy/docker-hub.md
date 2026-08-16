@@ -13,8 +13,9 @@ Related: [Azure Container Apps](azure-container-apps.md) for a managed host · [
 
 - A **LINE Messaging API channel** — its **Channel secret** and a long-lived **Channel access token**
   (LINE Developers console → your channel → *Messaging API* / *Basic settings*).
-- A **Hugging Face token** with the **Inference Providers** permission. Image editing and video use the
-  **paid** fal-ai provider, so those also need Inference Providers **credits**.
+- A **Hugging Face token** with the **Inference Providers** permission. All generation draws down your
+  Inference Providers **credits** (there's a free monthly allowance); image editing and video use the fal-ai
+  provider, which costs much more per call than hf-inference and eats those credits quickly.
 - A **public HTTPS URL** for the app. Either a tunnel (Dev Tunnels / ngrok / Cloudflare Tunnel) pointing at
   your local port, or a cloud host that gives you an HTTPS endpoint. LINE requires HTTPS for both the webhook
   and the media URLs the bot returns.
@@ -65,21 +66,21 @@ Everything else has a sensible default and is optional. Add only what you want t
 | `HuggingFace__ChatEndpoint` | `https://router.huggingface.co` | Chat base URL. Semantic Kernel appends `/v1/chat/completions`, so do **not** include `/v1`. |
 | `HuggingFace__ImageModel` | `stabilityai/stable-diffusion-3-medium-diffusers` | Text-to-image model. |
 | `HuggingFace__ImageEndpoint` | `https://router.huggingface.co/hf-inference/models/{model}` | Text-to-image endpoint; `{model}` is replaced with `ImageModel`. |
-| `HuggingFace__ImageEditModel` | `fal-ai/qwen-image-edit` | Image-to-image (✏️ edit) model. **fal-ai is paid.** |
+| `HuggingFace__ImageEditModel` | `fal-ai/qwen-image-edit` | Image-to-image (✏️ edit) model. **fal-ai costs more credits per call.** |
 | `HuggingFace__ImageEditEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | fal async-queue submit endpoint for editing; `{model}` → `ImageEditModel`. |
-| `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | Text-to-video model. **fal-ai is paid.** |
+| `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | Text-to-video model. **fal-ai is credit-heavy.** |
 | `HuggingFace__VideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | fal async-queue submit endpoint for video; `{model}` → `VideoModel`. |
 | `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | Hosts allowed when the app re-fetches media from a provider URL. Label-boundary match; **empty = deny all**. |
 
-> **hf-inference does not serve image-to-image or text-to-video.** Those default to the paid **fal-ai**
-> provider. If you point `VideoEndpoint`/`ImageEditEndpoint` at `hf-inference`, you'll get
+> **hf-inference does not serve image-to-image or text-to-video.** Those default to the **fal-ai**
+> provider (which costs more credits per call). If you point `VideoEndpoint`/`ImageEditEndpoint` at `hf-inference`, you'll get
 > `400 "Model not supported by provider hf-inference"`.
 
 **App behavior**
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `App__VideoEnabled` | `false` | Enable the `/video` command. Off by default because fal text-to-video is **paid and slow**; set `true` to allow it. |
+| `App__VideoEnabled` | `false` | Enable the `/video` command. Off by default because fal text-to-video is **credit-heavy and slow**; set `true` to allow it. |
 | `App__Locale` | `en` | Language of user-facing text and the rich menu (`en` or `ja`). |
 | `App__RichMenuEnabled` | `true` | Provision the mode-switcher rich menu on startup (idempotent). `false` runs without it. |
 | `App__MediaTtlMinutes` | `10` | How long generated media is kept in memory and served at `/media/{id}`. |
@@ -185,8 +186,8 @@ line webhook test-endpoint          # expect success / 200
 1. Add the bot as a friend (QR code in the console → *Messaging API*).
 2. Send a plain message → you should get a **chat** reply.
 3. Send `/image a cat on a skateboard` → a generated **image** with 🔄 / ✏️ / 💬 buttons.
-4. Tap **✏️ Edit** (or send a photo), then send an edit instruction → an **edited image** (paid fal-ai).
-5. Optional: if `App__VideoEnabled=true`, send `/video a running cat` → a **video** (fal-ai, paid and slow).
+4. Tap **✏️ Edit** (or send a photo), then send an edit instruction → an **edited image** (fal-ai, credit-heavy).
+5. Optional: if `App__VideoEnabled=true`, send `/video a running cat` → a **video** (fal-ai, credit-heavy and slow).
 
 ---
 
@@ -211,7 +212,7 @@ build time) — no rebuild needed when using a pulled image.
 | Webhook test fails | `App__PublicBaseUrl` / webhook URL not HTTPS or not reachable; container not running |
 | Chat replies but no image shows | `App__PublicBaseUrl` wrong or not publicly reachable (LINE can't fetch `/media/{id}`) |
 | `400 "Model not supported by provider hf-inference"` on edit/video | `ImageEditEndpoint`/`VideoEndpoint` (or the model id) points at hf-inference; use the fal-ai defaults above |
-| Other "error" on edit/video | HF token missing Inference Providers permission or **credits** (fal-ai is paid) |
+| Other "error" on edit/video | HF token missing Inference Providers permission, or **out of credits** (fal-ai burns them fast) |
 | No rich menu | `App__RichMenuEnabled=false`, or the channel access token lacks rich-menu scope |
 
 To see the actual error, check the container logs: `docker logs line-hf-bot` (look for `Failed to handle item ...`).

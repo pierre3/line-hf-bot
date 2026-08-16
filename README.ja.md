@@ -13,7 +13,7 @@ Web コンソールは不要）。手元の PC で Docker イメージを動か�
 ## できること
 - 💬 **チャット**（会話の流れを覚える。Semantic Kernel + Hugging Face）
 - 🎨 **画像生成** — `/image 説明`、または画像モードに切り替えて説明を送るだけ
-- 🎬 **動画生成** — `/video 説明`（text-to-video）を **fal-ai** プロバイダ経由で。fal は**有料**かつ生成が遅いため**既定オフ**（`App:VideoEnabled`）。`true` で有効化
+- 🎬 **動画生成** — `/video 説明`（text-to-video）を **fal-ai** プロバイダ経由で。fal-ai は Hugging Face クレジットの消費が激しく生成も遅いため**既定オフ**（`App:VideoEnabled`）。`true` で有効化
 - 🎛️ **モード切替リッチメニュー** — 下部メニューで チャット / 画像 / 動画 を切替。素のメッセージは
   現在モードで解釈されるのでプレフィックス不要。画像結果には 🔄 再生成 ／ ✏️ 編集（image-to-image）／ 💬 チャットへ ボタン
 - 🖼️ **自分の写真を編集** — 写真を送ると「どう編集しますか？」と聞かれ、次のメッセージで image-to-image 編集
@@ -38,8 +38,9 @@ LINE は画像に公開 HTTPS URL を要求するため、生成画像はアプ�
   （メディアは TTL キャッシュ）、**再起動・再デプロイで消えます**。データベースはありません。
 - **単一インスタンス限定。** 状態を共有しないため、レプリカを 2 つ以上動かすと履歴が分かれ、メディア URL も
   壊れます。**冗長化やスケールアウトには向きません** — 必ず 1 インスタンスで動かしてください。
-- **編集・動画は有料プロバイダ。** 画像編集と動画は **fal-ai** を使い、有料で Hugging Face の
-  Inference Providers クレジットが必要です。動画は既定オフです。
+- **編集・動画はクレジットの消費が激しい。** すべての生成が Hugging Face Inference Providers のクレジット
+  （毎月の無料枠あり）を消費します。画像編集と動画で使う **fal-ai** は hf-inference のチャット/画像より
+  1 回あたりの単価が高く、クレジットが一気に減るので注意してください。動画は既定オフです。
 
 ## はじめかた
 
@@ -103,13 +104,13 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | 編集用に受信するユーザー画像の取得上限/タイムアウト（既定 10MB / 30秒） |
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
-| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal は**有料**（Inference Providers のクレジットが必要） |
-| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal は**有料**かつ遅い |
+| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal-ai は hf-inference より 1 回あたりのクレジット単価が高い |
+| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal-ai はクレジット消費が激しく遅い |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 | `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
-| `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video は有料。既定 `false`） |
+| `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video はクレジット消費が激しく遅い。既定 `false`） |
 
 ## デプロイ
 公開とホスティングの手順を 2 つのガイドにまとめています（それぞれ日本語版あり）。

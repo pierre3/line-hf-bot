@@ -13,7 +13,7 @@ to keep it easy to run: start the Docker image on your PC, expose it through a t
 ## Features
 - 💬 **Chat** with conversation history (Semantic Kernel + Hugging Face)
 - 🎨 **Image generation** — `/image <prompt>`, or switch to Image mode and just send a description
-- 🎬 **Video generation** — `/video <prompt>` (text-to-video) via the **fal-ai** provider. **Off by default** (`App:VideoEnabled`) because fal is **paid** and slow; set it to `true` to enable
+- 🎬 **Video generation** — `/video <prompt>` (text-to-video) via the **fal-ai** provider. **Off by default** (`App:VideoEnabled`) because fal-ai burns through Hugging Face credits fast and is slow; set it to `true` to enable
 - 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
   interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate, ✏️ Edit (image-to-image), and 💬 Chat.
 - 🖼️ **Edit your own photo** — send a photo and the bot asks how to edit it; your next message is applied via image-to-image
@@ -38,8 +38,9 @@ Built for easy, small-scale use — mind these trade-offs:
   process memory, with a TTL cache for media. **They are lost on restart or redeploy.** There is no database.
 - **Single instance only.** Because state isn't shared, running more than one replica splits history and breaks
   media URLs. It is **not designed for horizontal scaling or redundancy** — run exactly one instance.
-- **Paid providers for editing/video.** Image editing and video use the **fal-ai** provider, which is paid and
-  needs Hugging Face Inference Providers credits. Video is off by default.
+- **Editing/video burn credits fast.** All generation draws down your Hugging Face Inference Providers credits
+  (there's a free monthly allowance). Image editing and video use the **fal-ai** provider, which costs much
+  more per call than hf-inference chat/image — so those eat your credits quickly. Video is off by default.
 
 ## Getting started
 
@@ -103,13 +104,13 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | limits for downloading a user-sent image to edit (default 10 MB / 30 s) |
 | `HuggingFace__ApiKey` | HF token with Inference Providers permission (required) |
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
-| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | image-to-image via the **fal-ai** provider (default `fal-ai/qwen-image-edit`). hf-inference doesn't serve image-to-image; fal is a **paid** provider (needs Inference Providers credits) |
-| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | text-to-video via the **fal-ai** provider (default `fal-ai/wan/v2.2-5b/text-to-video`). hf-inference doesn't serve text-to-video; fal is **paid** and slow |
+| `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | image-to-image via the **fal-ai** provider (default `fal-ai/qwen-image-edit`). hf-inference doesn't serve image-to-image; fal-ai costs more credits per call than hf-inference |
+| `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | text-to-video via the **fal-ai** provider (default `fal-ai/wan/v2.2-5b/text-to-video`). hf-inference doesn't serve text-to-video; fal-ai is credit-heavy and slow |
 | `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 | `App__Locale` | UI language for user-facing text and the rich menu (`en` default, or `ja`) |
 | `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
-| `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is paid; default `false`) |
+| `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is credit-heavy and slow; default `false`) |
 
 ## Deployment
 Two guides cover publishing and hosting the image (each with a Japanese version):
