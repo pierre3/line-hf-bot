@@ -6,23 +6,20 @@ using Microsoft.Extensions.Options;
 
 namespace LineHfBot.Tests;
 
-/// <summary>End-to-end response handling for the image/video services using a stub HTTP handler.</summary>
+/// <summary>End-to-end response handling for the (synchronous, bytes-or-JSON-URL) image service using a
+/// stub HTTP handler. Video now uses the fal async queue (see <c>VideoServiceTests</c>).</summary>
 public class MediaServiceTests
 {
     private static readonly byte[] SamplePng = Encoding.UTF8.GetBytes("PNG-fake-bytes");
-    private static readonly byte[] SampleMp4 = Encoding.UTF8.GetBytes("mp4-fake-bytes");
 
     private static IOptions<HuggingFaceOptions> Options(string allowedHosts = "fal.media;replicate.delivery") =>
         Microsoft.Extensions.Options.Options.Create(new HuggingFaceOptions
         {
             ApiKey = "hf_test_token",
             ImageModel = "some/model",
-            VideoModel = "some/video-model",
             ImageEndpoint = "https://router.huggingface.co/hf-inference/models/{model}",
-            VideoEndpoint = "https://router.huggingface.co/hf-inference/models/{model}",
             MediaRefetchAllowedHosts = allowedHosts,
             ImageTimeoutSeconds = 30,
-            VideoTimeoutSeconds = 30,
         });
 
     // AC#1: raw-bytes response is returned directly (no re-fetch).
@@ -123,23 +120,6 @@ public class MediaServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => svc.GenerateAsync("a dog", CancellationToken.None));
-    }
-
-    // AC#9: video JSON-URL response (video.url shape) still extracts + re-fetches.
-    [Fact]
-    public async Task Video_json_url_response_is_refetched()
-    {
-        var handler = new StubHttpMessageHandler(req => req.Method == HttpMethod.Post
-            ? StubHttpMessageHandler.Json("{\"video\":{\"url\":\"https://replicate.delivery/out.mp4\"}}")
-            : StubHttpMessageHandler.Bytes(SampleMp4, "video/mp4"));
-        var svc = new HuggingFaceVideoService(new HttpClient(handler), Options());
-
-        var media = await svc.GenerateAsync("a running dog", CancellationToken.None);
-
-        Assert.Equal(SampleMp4, media.Bytes);
-        Assert.Equal("video/mp4", media.ContentType);
-        Assert.Equal("replicate.delivery", handler.Seen[1].Uri!.Host);
-        Assert.False(handler.Seen[1].HasAuthorization);
     }
 
     // AC#10: the new config key exists with the documented default.
