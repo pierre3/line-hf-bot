@@ -38,7 +38,7 @@ az containerapp env create --name $ENV --resource-group $RG --location $LOC
 
 ```bash
 APP=line-hf-bot
-IMAGE=<Docker Hub ユーザー名>/line-hf-bot:latest      # または :1.0.0 のような固定タグ
+IMAGE=pierre3/line-hf-bot:latest      # または :1.0.0 のような固定タグ
 
 az containerapp create \
   --name $APP \
@@ -91,7 +91,7 @@ curl "https://$FQDN/health"      # -> {"status":"ok"}
 
 ## 更新のしかた
 
-- **イメージのバージョン更新:** `az containerapp update --name $APP --resource-group $RG --image <Docker Hub ユーザー名>/line-hf-bot:1.1.0`
+- **イメージのバージョン更新:** `az containerapp update --name $APP --resource-group $RG --image pierre3/line-hf-bot:1.1.0`
 - **設定の変更:** `az containerapp update --name $APP --resource-group $RG --set-env-vars App__VideoEnabled=true`
 - **シークレットのローテーション:** `az containerapp secret set --name $APP --resource-group $RG --secrets hf-key="<新しい値>"` の後、アクティブなリビジョンを再起動。
 
