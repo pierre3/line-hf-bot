@@ -3,8 +3,12 @@
 [English](README.md) | 日本語
 
 Hugging Face のモデルを使って、LINE で **AI チャット・画像生成・画像編集・動画生成**ができるボットです。
-ASP.NET（.NET 10）で作っています。手元の PC で Docker イメージを動かし、トンネルで公開して
-LINE につなぐだけ、という手軽さを目指しています。もちろんクラウドに置いても動きます。
+ASP.NET（.NET 10）で作っています。
+
+## 目的
+Hugging Face のモデルを、**LINE のチャット UI** から気軽に試せるようにするためのボットです（専用アプリや
+Web コンソールは不要）。手元の PC で Docker イメージを動かし、トンネルで公開して LINE につなぐだけ、という
+手軽さを目指しています（クラウドに置いても動きます）。**検証用・個人利用**を想定しており、多人数向けのサービスではありません。
 
 ## できること
 - 💬 **チャット**（会話の流れを覚える。Semantic Kernel + Hugging Face）
@@ -26,6 +30,16 @@ LINE → POST /webhook（署名検証して即 200 応答）
      → LINE へ返信/プッシュ（画像は /media/{id} で配信）
 ```
 LINE は画像に公開 HTTPS URL を要求するため、生成画像はアプリ自身がホストし、その URL を LINE に渡します。
+
+## 制限事項
+手軽・小規模での利用に振った作りです。次のトレードオフに注意してください。
+
+- **すべてインメモリ。** 会話履歴と生成メディア（`/media/{id}` で配信）はプロセスのメモリ上だけにあり
+  （メディアは TTL キャッシュ）、**再起動・再デプロイで消えます**。データベースはありません。
+- **単一インスタンス限定。** 状態を共有しないため、レプリカを 2 つ以上動かすと履歴が分かれ、メディア URL も
+  壊れます。**冗長化やスケールアウトには向きません** — 必ず 1 インスタンスで動かしてください。
+- **編集・動画は有料プロバイダ。** 画像編集と動画は **fal-ai** を使い、有料で Hugging Face の
+  Inference Providers クレジットが必要です。動画は既定オフです。
 
 ## はじめかた
 
@@ -97,7 +111,17 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
 | `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video は有料。既定 `false`） |
 
-## Docker Hub へ公開
+## デプロイ
+公開とホスティングの手順を 2 つのガイドにまとめています（それぞれ日本語版あり）。
+
+- **[Docker Hub（CI/CD）と LINE 動作確認](docs/deploy/docker-hub.ja.md)** — GitHub Actions（`v*` タグを push）
+  または手動でイメージを公開し、イメージを動かして LINE で一通り確認するまで。
+- **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — Azure CLI でマネージドな HTTPS
+  エンドポイントにホスティング。
+
+CI/CD は配線済みです。`.github/workflows/ci.yml` が push/PR ごとに build＋test、`.github/workflows/release.yml`
+がバージョンタグ push でマルチアーキイメージを Docker Hub へ公開します。手動公開の簡易版:
+
 ```bash
 docker build -t <ユーザー名>/line-hf-bot .
 docker push <ユーザー名>/line-hf-bot
@@ -112,9 +136,10 @@ docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot
 - Hugging Face Inference Providers（画像・動画）
 
 ## ドキュメント
+- デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub と LINE 動作確認](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)
 - 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
 
 ## ライセンス
-まだ決めていません。
+[MIT](LICENSE)。

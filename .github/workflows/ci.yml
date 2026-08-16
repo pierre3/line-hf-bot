@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore LineHfBot.slnx
+
+      - name: Build
+        run: dotnet build LineHfBot.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test LineHfBot.slnx -c Release --no-build --verbosity normal
+
+  docker-build:
+    name: Docker build (no push)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Builds the image the same way the release does, so a broken Dockerfile
+      # (or an empty certs/ context) fails a PR instead of the release.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: line-hf-bot:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

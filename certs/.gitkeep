@@ -1,0 +1,3 @@
+# Keeps the certs/ directory present in a clean checkout so the Docker build's
+# `COPY certs/ ...` step succeeds even when no *.crt files are added (they are
+# gitignored). Corporate-proxy users drop their root CA *.crt files here; see README.md.
