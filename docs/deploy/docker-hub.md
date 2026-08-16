@@ -105,14 +105,15 @@ Everything else has a sensible default and is optional. Add only what you want t
 
 ## 2. Pull and run the image
 
-Replace `<your-user>` with the Docker Hub namespace the image was published under. Use `:latest` or pin a
-version such as `:1.0.0`.
+The image is published on Docker Hub as [`pierre3/line-hf-bot`](https://hub.docker.com/r/pierre3/line-hf-bot).
+Use `:latest` or pin a version such as `:1.0.0`. (If you run your own build from a fork, substitute your own
+Docker Hub namespace.)
 
 ### With `docker run`
 
 ```bash
-docker pull <your-user>/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 ```
 
 To expose it on a different host port (e.g. 8081), change the **left** side of `-p`: `-p 8081:8080`.
@@ -124,7 +125,7 @@ Create a `compose.yaml` next to your `.env` that uses the published image (no bu
 ```yaml
 services:
   line-hf-bot:
-    image: <your-user>/line-hf-bot:latest
+    image: pierre3/line-hf-bot:latest
     container_name: line-hf-bot
     ports:
       - "${HOST_PORT:-8080}:8080"   # set HOST_PORT in .env to change the host port
@@ -193,8 +194,8 @@ line webhook test-endpoint          # expect success / 200
 
 ```bash
 # docker run
-docker pull <your-user>/line-hf-bot:latest
-docker rm -f line-hf-bot && docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker rm -f line-hf-bot && docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 
 # docker compose
 docker compose pull && docker compose up -d

@@ -104,14 +104,15 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 
 ## 2. イメージを取得して起動
 
-`<ユーザー名>` はイメージが公開されている Docker Hub の名前空間に置き換えます。`:latest` か、`:1.0.0` のような
-固定バージョンを使います。
+イメージは Docker Hub の [`pierre3/line-hf-bot`](https://hub.docker.com/r/pierre3/line-hf-bot) で公開しています。
+`:latest` か、`:1.0.0` のような固定バージョンを使います。（fork して自分でビルドしたイメージを使う場合は、
+自分の Docker Hub 名前空間に置き換えてください。）
 
 ### `docker run` の場合
 
 ```bash
-docker pull <ユーザー名>/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 ```
 
 別の host ポート（例 8081）で公開するには `-p` の**左側**を変えます: `-p 8081:8080`。
@@ -123,7 +124,7 @@ docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot:latest
 ```yaml
 services:
   line-hf-bot:
-    image: <ユーザー名>/line-hf-bot:latest
+    image: pierre3/line-hf-bot:latest
     container_name: line-hf-bot
     ports:
       - "${HOST_PORT:-8080}:8080"   # host ポートを変えるなら .env に HOST_PORT を設定
@@ -192,8 +193,8 @@ line webhook test-endpoint          # 成功 / 200 になればOK
 
 ```bash
 # docker run
-docker pull <ユーザー名>/line-hf-bot:latest
-docker rm -f line-hf-bot && docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker rm -f line-hf-bot && docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 
 # docker compose
 docker compose pull && docker compose up -d

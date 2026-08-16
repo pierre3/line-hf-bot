@@ -122,8 +122,8 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 クイックスタート（公開イメージを取得して起動）:
 
 ```bash
-docker pull <ユーザー名>/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 ```
 
 CI/CD も配線済みです。`.github/workflows/ci.yml` が push/PR ごとに build＋test、`.github/workflows/release.yml`

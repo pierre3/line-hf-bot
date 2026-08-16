@@ -123,8 +123,8 @@ Two guides cover publishing and hosting the image (each with a Japanese version)
 Quick start (pull & run the published image):
 
 ```bash
-docker pull <your-user>/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot:latest
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
 ```
 
 CI/CD is wired up too: `.github/workflows/ci.yml` builds and tests every push/PR; `.github/workflows/release.yml`

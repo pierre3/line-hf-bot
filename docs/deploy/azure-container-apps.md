@@ -38,7 +38,7 @@ Store tokens as **secrets** and reference them from env vars with `secretref:`. 
 
 ```bash
 APP=line-hf-bot
-IMAGE=<your-dockerhub-user>/line-hf-bot:latest      # or a pinned tag like :1.0.0
+IMAGE=pierre3/line-hf-bot:latest      # or a pinned tag like :1.0.0
 
 az containerapp create \
   --name $APP \
@@ -91,7 +91,7 @@ In the [LINE Developers console](https://developers.line.biz/) enable **Use webh
 
 ## Updating
 
-- **New image version:** `az containerapp update --name $APP --resource-group $RG --image <your-dockerhub-user>/line-hf-bot:1.1.0`
+- **New image version:** `az containerapp update --name $APP --resource-group $RG --image pierre3/line-hf-bot:1.1.0`
 - **Change a setting:** `az containerapp update --name $APP --resource-group $RG --set-env-vars App__VideoEnabled=true`
 - **Rotate a secret:** `az containerapp secret set --name $APP --resource-group $RG --secrets hf-key="<NEW>"` then restart the active revision.
 
