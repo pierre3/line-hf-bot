@@ -114,20 +114,21 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 ## Deployment
 Two guides cover publishing and hosting the image (each with a Japanese version):
 
-- **[Docker Hub (CI/CD) & LINE setup walkthrough](docs/deploy/docker-hub.md)** — publish via GitHub Actions
-  (push a `v*` tag) or by hand, then run the image and verify it end-to-end in LINE.
+- **[Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md)** — pull the published image, configure
+  `.env` (with a full parameter reference), run it, and verify end-to-end in LINE. Publishing/CI-CD is covered
+  in an appendix.
 - **[Azure Container Apps](docs/deploy/azure-container-apps.md)** — host it on a managed HTTPS endpoint with
   the Azure CLI.
 
-CI/CD is wired up: `.github/workflows/ci.yml` builds and tests every push/PR; `.github/workflows/release.yml`
-publishes a multi-arch image to Docker Hub when you push a version tag. Quick manual publish:
+Quick start (pull & run the published image):
 
 ```bash
-docker build -t <your-user>/line-hf-bot .
-docker push <your-user>/line-hf-bot
-# run anywhere:
-docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
+docker pull <your-user>/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot:latest
 ```
+
+CI/CD is wired up too: `.github/workflows/ci.yml` builds and tests every push/PR; `.github/workflows/release.yml`
+publishes a multi-arch image to Docker Hub when you push a `v*` tag (see the guide's appendix).
 
 ## Tech stack
 - .NET 10 / ASP.NET Minimal API
@@ -136,7 +137,7 @@ docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
 - Hugging Face Inference Providers (image / video)
 
 ## Documentation
-- Deployment guides: [`docs/deploy/`](docs/deploy/) — [Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md)
+- Deployment guides: [`docs/deploy/`](docs/deploy/) — [Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md)
 - Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
 - Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)

@@ -85,7 +85,7 @@ curl "https://$FQDN/health"      # -> {"status":"ok"}
 
 ## 5. LINE の Webhook を向ける
 
-[LINE Developers コンソール](https://developers.line.biz/)で **Webhook の利用**をオン、応答メッセージをオフにし、Webhook URL を `https://<FQDN>/webhook` に設定します（`line` CLI のショートカットとアプリ内での動作確認手順は [LINE 動作確認の手順](docker-hub.ja.md#手順3--line-の-webhook-を向ける) を参照）。
+[LINE Developers コンソール](https://developers.line.biz/)で **Webhook の利用**をオン、応答メッセージをオフにし、Webhook URL を `https://<FQDN>/webhook` に設定します（`line` CLI のショートカットとアプリ内での動作確認手順は [LINE 動作確認の手順](docker-hub.ja.md#4-line-の-webhook-を向ける) を参照）。
 
 ---
 
