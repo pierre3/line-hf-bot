@@ -3,8 +3,12 @@
 English | [日本語](README.ja.md)
 
 A LINE bot that uses Hugging Face models for **AI chat, image generation, image editing, and video generation**.
-Built on ASP.NET (.NET 10). The aim is to keep it easy to run: start the Docker image on your PC,
-expose it through a tunnel, and connect it to LINE. It can also be hosted in the cloud.
+Built on ASP.NET (.NET 10).
+
+## Purpose
+Try Hugging Face models casually through the **LINE chat UI** — no separate app or web console. The goal is
+to keep it easy to run: start the Docker image on your PC, expose it through a tunnel, and connect it to LINE
+(it can also be hosted in the cloud). Intended for **evaluation and personal use**, not as a multi-user service.
 
 ## Features
 - 💬 **Chat** with conversation history (Semantic Kernel + Hugging Face)
@@ -26,6 +30,16 @@ LINE → POST /webhook (verify signature, return 200 immediately)
      → reply/push back to LINE  (images are hosted at /media/{id})
 ```
 LINE requires a public HTTPS URL for images, so the app hosts generated media itself and hands LINE the URL.
+
+## Limitations
+Built for easy, small-scale use — mind these trade-offs:
+
+- **Everything is in memory.** Conversation history and generated media (served at `/media/{id}`) live only in
+  process memory, with a TTL cache for media. **They are lost on restart or redeploy.** There is no database.
+- **Single instance only.** Because state isn't shared, running more than one replica splits history and breaks
+  media URLs. It is **not designed for horizontal scaling or redundancy** — run exactly one instance.
+- **Paid providers for editing/video.** Image editing and video use the **fal-ai** provider, which is paid and
+  needs Hugging Face Inference Providers credits. Video is off by default.
 
 ## Getting started
 
@@ -97,7 +111,17 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
 | `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is paid; default `false`) |
 
-## Publish to Docker Hub
+## Deployment
+Two guides cover publishing and hosting the image (each with a Japanese version):
+
+- **[Docker Hub (CI/CD) & LINE setup walkthrough](docs/deploy/docker-hub.md)** — publish via GitHub Actions
+  (push a `v*` tag) or by hand, then run the image and verify it end-to-end in LINE.
+- **[Azure Container Apps](docs/deploy/azure-container-apps.md)** — host it on a managed HTTPS endpoint with
+  the Azure CLI.
+
+CI/CD is wired up: `.github/workflows/ci.yml` builds and tests every push/PR; `.github/workflows/release.yml`
+publishes a multi-arch image to Docker Hub when you push a version tag. Quick manual publish:
+
 ```bash
 docker build -t <your-user>/line-hf-bot .
 docker push <your-user>/line-hf-bot
@@ -112,9 +136,10 @@ docker run --env-file .env -p 8080:8080 <your-user>/line-hf-bot
 - Hugging Face Inference Providers (image / video)
 
 ## Documentation
+- Deployment guides: [`docs/deploy/`](docs/deploy/) — [Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md)
 - Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
 - Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)
 
 ## License
-Not decided yet.
+[MIT](LICENSE).
