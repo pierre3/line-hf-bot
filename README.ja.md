@@ -114,20 +114,20 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 ## デプロイ
 公開とホスティングの手順を 2 つのガイドにまとめています（それぞれ日本語版あり）。
 
-- **[Docker Hub（CI/CD）と LINE 動作確認](docs/deploy/docker-hub.ja.md)** — GitHub Actions（`v*` タグを push）
-  または手動でイメージを公開し、イメージを動かして LINE で一通り確認するまで。
+- **[Docker Hub から取得して起動 と LINE 設定](docs/deploy/docker-hub.ja.md)** — 公開イメージを取得し、
+  `.env` を設定（全パラメータの一覧つき）して起動し、LINE で一通り確認するまで。公開/CI-CD は付録に記載。
 - **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — Azure CLI でマネージドな HTTPS
   エンドポイントにホスティング。
 
-CI/CD は配線済みです。`.github/workflows/ci.yml` が push/PR ごとに build＋test、`.github/workflows/release.yml`
-がバージョンタグ push でマルチアーキイメージを Docker Hub へ公開します。手動公開の簡易版:
+クイックスタート（公開イメージを取得して起動）:
 
 ```bash
-docker build -t <ユーザー名>/line-hf-bot .
-docker push <ユーザー名>/line-hf-bot
-# どこでも実行:
-docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot
+docker pull <ユーザー名>/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot:latest
 ```
+
+CI/CD も配線済みです。`.github/workflows/ci.yml` が push/PR ごとに build＋test、`.github/workflows/release.yml`
+が `v*` タグ push でマルチアーキイメージを Docker Hub へ公開します（詳細はガイドの付録）。
 
 ## 使っている技術
 - .NET 10 / ASP.NET Minimal API
@@ -136,7 +136,7 @@ docker run --env-file .env -p 8080:8080 <ユーザー名>/line-hf-bot
 - Hugging Face Inference Providers（画像・動画）
 
 ## ドキュメント
-- デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub と LINE 動作確認](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)
+- デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)
 - 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)

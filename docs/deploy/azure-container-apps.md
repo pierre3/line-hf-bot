@@ -85,7 +85,7 @@ curl "https://$FQDN/health"      # -> {"status":"ok"}
 
 ## 5. Point LINE at the webhook
 
-In the [LINE Developers console](https://developers.line.biz/) enable **Use webhook** and turn off auto-reply, then set the webhook URL to `https://<FQDN>/webhook` (see the [LINE setup walkthrough](docker-hub.md#step-3--point-line-at-the-webhook) for the `line` CLI shortcut and the in-app verification steps).
+In the [LINE Developers console](https://developers.line.biz/) enable **Use webhook** and turn off auto-reply, then set the webhook URL to `https://<FQDN>/webhook` (see the [LINE setup walkthrough](docker-hub.md#4-point-line-at-the-webhook) for the `line` CLI shortcut and the in-app verification steps).
 
 ---
 
