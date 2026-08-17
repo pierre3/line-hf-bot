@@ -13,10 +13,11 @@ Web コンソールは不要）。手元の PC で Docker イメージを動か�
 ## できること
 - 💬 **チャット**（会話の流れを覚える。Semantic Kernel + Hugging Face）
 - 🎨 **画像生成** — `/image 説明`、または画像モードに切り替えて説明を送るだけ
-- 🎬 **動画生成** — `/video 説明`（text-to-video）を **fal-ai** プロバイダ経由で。fal-ai は Hugging Face クレジットの消費が激しく生成も遅いため**既定オフ**（`App:VideoEnabled`）。`true` で有効化
+- 🎬 **動画生成** — `/video 説明`（text-to-video）と、画像からの **🎬 動画にする**（image-to-video）。どちらも **fal-ai** プロバイダ経由。fal-ai は Hugging Face クレジットの消費が激しく生成も遅いため**既定オフ**（`App:VideoEnabled` が両方をまとめて制御）。`true` で有効化
+- 🎞️ **画像を動画に**（image-to-video） — 動画を有効にすると、画像結果や送った写真に **🎬 動画にする** が出る。押して動きを説明（例:「ゆっくりズームイン」）すると、その画像が短い動画になる（fal-ai 経由）
 - 🎛️ **モード切替リッチメニュー** — 下部メニューで チャット / 画像 / 動画 を切替。素のメッセージは
-  現在モードで解釈されるのでプレフィックス不要。画像結果には 🔄 再生成 ／ ✏️ 編集（image-to-image）／ 💬 チャットへ ボタン
-- 🖼️ **写真を送る** — **✏️ 編集**（image-to-image）か **💬 この画像について質問**（画像 Q&A）を選べる。どちらかを押してから指示や質問を送る（`App:VisionEnabled=false` なら写真は従来どおり即・編集フロー）
+  現在モードで解釈されるのでプレフィックス不要。画像結果には 🔄 再生成 ／ ✏️ 編集（image-to-image）／ 🎬 動画にする（有効時）／ 💬 チャットへ ボタン
+- 🖼️ **写真を送る** — **✏️ 編集**（image-to-image）／ **💬 この画像について質問**（画像 Q&A）／ **🎬 動画にする**（image-to-video、動画有効時）を選べる。どれかを押してから指示・質問・動きを送る（`App:VisionEnabled=false` なら写真は従来どおり即・編集フロー）
 - 🔍 **画像について質問**（vision/VQA） — 送った写真への 1 回きりの質問に、vision モデルが回答。fal ではなくチャットと同じ HF Inference クレジットを消費。既定オン。トークンで利用できる vision モデルが必要（`HuggingFace:VisionModel`）
 - 🌐 **英語デフォルト・日本語対応**（`App:Locale` = `en`/`ja`）。ユーザー向け文言とリッチメニューが追従
 - 🐳 Docker イメージとして配布。ローカル＋トンネルで手軽に、クラウド運用も可能
@@ -107,13 +108,14 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | 入力 | 動作 |
 | --- | --- |
 | 通常のテキスト | 現在モード（チャット / 画像 / 動画）で解釈 |
-| 写真 | ✏️編集 / 💬この画像について質問 を提示。どちらかを押すと次のメッセージが適用される（`App:VisionEnabled=false` なら即・編集） |
+| 写真 | ✏️編集 / 💬この画像について質問 / 🎬動画にする（動画有効時）を提示。どれかを押すと次のメッセージが適用される（`App:VisionEnabled=false` なら即・編集） |
 | `/image 説明` | 画像を生成 |
 | `/video 説明` | 動画を生成（text-to-video、fal-ai 経由）。既定オフ、`App:VideoEnabled` 参照 |
+| 🎬 動画にする | 作業中の画像を短い動画に（image-to-video、fal-ai 経由）。`App:VideoEnabled=true` のとき画像結果・送信写真に表示 |
 | `/reset` | 会話履歴を消し、モードを既定に戻す |
 | `/help` | 使い方を表示 |
 
-スラッシュコマンドはモードを変えずにどのモードでも使えます。画像結果には 🔄 再生成 ／ ✏️ 編集 ／ 💬 チャットへ ボタンが付きます。
+スラッシュコマンドはモードを変えずにどのモードでも使えます。画像結果には 🔄 再生成 ／ ✏️ 編集 ／ 🎬 動画にする（有効時）／ 💬 チャットへ ボタンが付きます。
 
 ## 設定
 設定はすべて環境変数（`セクション__キー`）です。全一覧は [`.env.example`](.env.example) を参照。主なもの:
@@ -126,12 +128,13 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal-ai は hf-inference より 1 回あたりのクレジット単価が高い |
 | `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal-ai はクレジット消費が激しく遅い |
+| `HuggingFace__ImageToVideoModel` / `HuggingFace__ImageToVideoEndpoint` | 画像→動画(image-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-a14b/image-to-video`、軽い代替 `fal-ai/wan-i2v`）。hf-inference は image-to-video 非対応。A14B は text-to-video 既定の 5B よりクレジット単価が高い。`App__VideoEnabled` で制御 |
 | `HuggingFace__VisionModel` / `HuggingFace__VisionEndpoint` | 送信写真への画像 Q&A。OpenAI 互換エンドポイント上の vision チャットモデル。fal ではなくチャットと同じ HF クレジットを消費。**provider を pin（`model:provider`）し HF 設定で有効化**する（既定 `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` は **ovhcloud** の有効化が必要）。→[vision トラブルシュート](#vision-トラブルシュート) |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 | `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
-| `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video はクレジット消費が激しく遅い。既定 `false`） |
+| `App__VideoEnabled` | 動画を有効化: `/video`（text-to-video）**と** 🎬 動画にする（image-to-video）。どちらも fal-ai でクレジット消費が激しく遅い。既定 `false` |
 | `App__VisionEnabled` | 送信写真への画像 Q&A（既定 `true`）。オン: 写真受信時に 編集/質問 を提示。オフ: 写真は即・編集フロー（vision UI なし） |
 
 ### vision トラブルシュート
@@ -148,7 +151,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 
 ## ドキュメント
 - デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)、[ソースから動かす](docs/deploy/from-source.ja.md)
-- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)、07 画像 Q&A(vision/VQA)
+- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)、07 画像 Q&A(vision/VQA)、08 画像→動画(image-to-video)
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
 

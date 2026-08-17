@@ -51,10 +51,14 @@ public sealed class UserMessages
     public string VisionThinking => _s.VisionThinking;
     public string VisionImageExpired => _s.VisionImageExpired;
 
+    // Image-to-video on a working image (spec 08)
+    public string AnimatePrompt => _s.AnimatePrompt;
+
     // Quick reply button labels
     public string LabelRegenerate => _s.LabelRegenerate;
     public string LabelEdit => _s.LabelEdit;
     public string LabelAsk => _s.LabelAsk;
+    public string LabelAnimate => _s.LabelAnimate;
     public string LabelBackToChat => _s.LabelBackToChat;
 
     /// <summary>Chat assistant persona; steers the reply language to the configured locale.</summary>
@@ -88,9 +92,11 @@ public sealed class UserMessages
         string VisionPrompt,
         string VisionThinking,
         string VisionImageExpired,
+        string AnimatePrompt,
         string LabelRegenerate,
         string LabelEdit,
         string LabelAsk,
+        string LabelAnimate,
         string LabelBackToChat,
         string SystemPrompt);
 
@@ -100,8 +106,8 @@ public sealed class UserMessages
             "・Send a message to chat with the AI\n" +
             "・Use the menu at the bottom to switch mode (Chat / Image / Video)\n" +
             "・In Image mode, send a description to generate an image\n" +
-            "・After an image, tap 🔄 to regenerate or ✏️ to edit it\n" +
-            "・Send a photo to edit it or ask about it\n" +
+            "・After an image, tap 🔄 to regenerate, ✏️ to edit, or 🎬 to make a video\n" +
+            "・Send a photo to edit it, ask about it, or turn it into a video\n" +
             "・/image <text> … make an image\n" +
             "・/video <text> … make a video\n" +
             "・/reset … clear the conversation\n" +
@@ -132,9 +138,11 @@ public sealed class UserMessages
         VisionPrompt: "What would you like to ask about this image? e.g. What is written here?",
         VisionThinking: "Looking at your image… 🔍",
         VisionImageExpired: "That image is no longer available. Please send the photo again.",
+        AnimatePrompt: "How should it move? Send a short description. e.g. slowly zoom in",
         LabelRegenerate: "🔄 Regenerate",
         LabelEdit: "✏️ Edit",
         LabelAsk: "💬 Ask about this",
+        LabelAnimate: "🎬 Make a video",
         LabelBackToChat: "💬 Chat",
         SystemPrompt: "You are a kind, helpful assistant. Answer clearly and concisely.");
 
@@ -144,8 +152,8 @@ public sealed class UserMessages
             "・そのままメッセージを送ると AI とチャットできます\n" +
             "・下のメニューでモード（チャット / 画像 / 動画）を切り替えられます\n" +
             "・画像モードでは、説明を送ると画像を作ります\n" +
-            "・画像のあとは 🔄 で作り直し、✏️ で編集できます\n" +
-            "・写真を送ると、その画像を編集するか、内容を質問できます\n" +
+            "・画像のあとは 🔄 で作り直し、✏️ で編集、🎬 で動画にできます\n" +
+            "・写真を送ると、編集・内容の質問・動画化ができます\n" +
             "・/image 説明 … 画像を作ります\n" +
             "・/video 説明 … 動画を作ります\n" +
             "・/reset … 会話の履歴を消します\n" +
@@ -176,9 +184,11 @@ public sealed class UserMessages
         VisionPrompt: "この画像について何を聞きますか？例: ここに何が書いてある？",
         VisionThinking: "画像を確認しています… 🔍",
         VisionImageExpired: "その画像はもう使えません。もう一度写真を送ってください。",
+        AnimatePrompt: "どんな動きにしますか？ 短い説明を送ってください。例: ゆっくりズームイン",
         LabelRegenerate: "🔄 再生成",
         LabelEdit: "✏️ 編集",
         LabelAsk: "💬 この画像について質問",
+        LabelAnimate: "🎬 動画にする",
         LabelBackToChat: "💬 チャットへ",
         SystemPrompt: "あなたは親切で丁寧なアシスタントです。分かりやすく簡潔に答えてください。");
 }

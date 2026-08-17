@@ -19,6 +19,7 @@ public sealed class WorkProcessor(
     IImageService imageService,
     IImageEditService imageEditService,
     IVideoService videoService,
+    IImageToVideoService imageToVideoService,
     IVisionService visionService,
     ILineContentService lineContent,
     ChatHistoryStore history,
@@ -68,6 +69,17 @@ public sealed class WorkProcessor(
                     else
                     {
                         // text-to-video needs a provider integration; ships disabled for now.
+                        await SendAsync(item, messages.NotYetImplemented, cancellationToken);
+                    }
+                    break;
+                case WorkKind.ImageToVideo:
+                    if (appOptions.Value.VideoEnabled)
+                    {
+                        await HandleImageToVideoAsync(item, cancellationToken);
+                    }
+                    else
+                    {
+                        // image-to-video runs on the same credit-heavy fal provider as /video; same opt-in gate.
                         await SendAsync(item, messages.NotYetImplemented, cancellationToken);
                     }
                     break;
@@ -210,6 +222,33 @@ public sealed class WorkProcessor(
         }
 
         var media = await videoService.GenerateAsync(item.Text, cancellationToken);
+        var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
+        await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken, quickReplies.VideoResult);
+    }
+
+    /// <summary>
+    /// Animate the user's working image (image-to-video): the reference image is the last generation/edit or a
+    /// received photo, and item.Text is the motion instruction. Mirrors <see cref="HandleImageEditAsync"/>
+    /// (reference lookup) but pushes a video like <see cref="HandleVideoAsync"/>. Timeout/no-notify on OCE
+    /// matches text-to-video and image-edit (see the top-level catch).
+    /// </summary>
+    private async Task HandleImageToVideoAsync(WorkItem item, CancellationToken cancellationToken)
+    {
+        var baseUrl = await PrepareMediaAsync(item, messages.AnimatePrompt, messages.GeneratingVideo, cancellationToken);
+        if (baseUrl is null)
+        {
+            return;
+        }
+
+        // The reference image lives in the TTL media cache and may have expired.
+        if (string.IsNullOrEmpty(item.RefImageId) ||
+            !mediaStore.TryGet(item.RefImageId, out var reference) || reference is null)
+        {
+            await SendAsync(item, messages.EditImageExpired, cancellationToken);
+            return;
+        }
+
+        var media = await imageToVideoService.GenerateAsync(reference.Bytes, reference.ContentType, item.Text, cancellationToken);
         var url = $"{baseUrl}/media/{mediaStore.Save(media)}";
         await messenger.PushVideoAsync(item.UserId, url, $"{baseUrl}{VideoPreview.Path}", cancellationToken, quickReplies.VideoResult);
     }

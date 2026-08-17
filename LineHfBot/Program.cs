@@ -60,6 +60,9 @@ builder.Services.AddHttpClient<IVideoService, HuggingFaceVideoService>(
 builder.Services.AddHttpClient<IImageEditService, HuggingFaceImageEditService>(
         c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient<IImageToVideoService, HuggingFaceImageToVideoService>(
+        c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient<IVisionService, HuggingFaceVisionService>(
         c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan) // per-request timeout is applied in the service
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
@@ -192,6 +195,24 @@ if (app.Environment.IsDevelopment())
         try
         {
             var media = await videos.GenerateAsync(prompt ?? "", ct);
+            return Results.File(media.Bytes, media.ContentType);
+        }
+        catch (Exception ex)
+        {
+            return Results.Text($"ERROR {ex.GetType().Name}: {ex.Message}");
+        }
+    });
+
+    // Dev-only: exercise the image-to-video path end-to-end. Generates a reference image via text-to-image,
+    // then animates it with the given motion prompt. Returns the video bytes, or an error string.
+    // Example: GET /dev/imagetovideo?prompt=slowly%20zoom%20in  (curl -o out.mp4)
+    app.MapGet("/dev/imagetovideo", async (
+        string? prompt, IImageService images, IImageToVideoService animate, CancellationToken ct) =>
+    {
+        try
+        {
+            var reference = await images.GenerateAsync("a simple daytime landscape photo", ct);
+            var media = await animate.GenerateAsync(reference.Bytes, reference.ContentType, prompt ?? "slowly zoom in", ct);
             return Results.File(media.Bytes, media.ContentType);
         }
         catch (Exception ex)

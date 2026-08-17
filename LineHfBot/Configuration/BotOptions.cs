@@ -40,6 +40,15 @@ public sealed class HuggingFaceOptions
     public string ImageEditModel { get; set; } = "fal-ai/qwen-image-edit";
 
     /// <summary>
+    /// Image-to-video model, as a provider model id. Image-to-video is not served by hf-inference, so this
+    /// defaults to the fal-ai provider id for Wan2.2-I2V-A14B. Change together with
+    /// <see cref="ImageToVideoEndpoint"/> to target a different provider (a lighter alternative is
+    /// "fal-ai/wan-i2v"). Runs on the same credit-heavy fal provider as text-to-video and is gated by the
+    /// same <see cref="AppOptions.VideoEnabled"/> flag.
+    /// </summary>
+    public string ImageToVideoModel { get; set; } = "fal-ai/wan/v2.2-a14b/image-to-video";
+
+    /// <summary>
     /// Chat completion base URL. Defaults to the Hugging Face router; the SK connector
     /// appends "/v1/chat/completions", so this must NOT include the "/v1" suffix.
     /// Adjust if your model/provider needs a different base URL.
@@ -87,6 +96,15 @@ public sealed class HuggingFaceOptions
     public string ImageEditEndpoint { get; set; } = "https://router.huggingface.co/fal-ai/{model}?_subdomain=queue";
 
     /// <summary>
+    /// Image-to-video submit endpoint template. "{model}" is replaced with <see cref="ImageToVideoModel"/>.
+    /// Defaults to the fal-ai async queue on the HF router (same template as text-to-video/image-to-image):
+    /// the service submits the job here, polls the returned status URL, then reads the result video URL.
+    /// hf-inference does not serve image-to-video, so a GPU provider is required; changing provider means
+    /// changing this template, the model id, and possibly the request/response handling.
+    /// </summary>
+    public string ImageToVideoEndpoint { get; set; } = "https://router.huggingface.co/fal-ai/{model}?_subdomain=queue";
+
+    /// <summary>
     /// Hosts allowed when re-fetching media from a provider-supplied URL (JSON-URL responses).
     /// Shared by the image and video paths. Separated by ";" / "," / whitespace; label-boundary match
     /// (e.g. "fal.media" allows "cdn.fal.media" but not "evilfal.media"). Empty = deny all (fail-closed).
@@ -111,9 +129,11 @@ public sealed class AppOptions
     public int MediaTtlMinutes { get; set; } = 10;
 
     /// <summary>
-    /// Enable the /video command. Off by default: text-to-video runs via the credit-heavy, slow fal-ai provider
-    /// (see <see cref="HuggingFaceOptions.VideoModel"/>/<see cref="HuggingFaceOptions.VideoEndpoint"/>),
-    /// so it ships as opt-in to avoid draining HF Inference credits unexpectedly. Set to true once your HF token has credits to spare.
+    /// Enable video generation: the /video command (text-to-video) and the "🎬 Make a video" button on
+    /// images (image-to-video). Off by default: both run via the credit-heavy, slow fal-ai provider
+    /// (see <see cref="HuggingFaceOptions.VideoModel"/>/<see cref="HuggingFaceOptions.ImageToVideoModel"/>),
+    /// so they ship as opt-in to avoid draining HF Inference credits unexpectedly. When off, no animate
+    /// button is shown and both paths reply "not available". Set to true once your HF token has credits to spare.
     /// </summary>
     public bool VideoEnabled { get; set; }
 

@@ -45,6 +45,8 @@ public class WorkProcessorVisionTests
     { public Task<GeneratedMedia> GenerateAsync(string prompt, CancellationToken ct) => throw new NotSupportedException(); }
     private sealed class UnusedVideo : IVideoService
     { public Task<GeneratedMedia> GenerateAsync(string prompt, CancellationToken ct) => throw new NotSupportedException(); }
+    private sealed class UnusedImageToVideo : IImageToVideoService
+    { public Task<GeneratedMedia> GenerateAsync(byte[] referenceImage, string referenceContentType, string prompt, CancellationToken ct) => throw new NotSupportedException(); }
     private sealed class UnusedEdit : IImageEditService
     { public Task<GeneratedMedia> GenerateAsync(byte[] referenceImage, string instruction, CancellationToken ct) => throw new NotSupportedException(); }
     private sealed class UnusedChat : IChatService
@@ -62,9 +64,9 @@ public class WorkProcessorVisionTests
         var msg = new FakeMessenger();
         var vision = new FakeVision(answer);
         var proc = new WorkProcessor(
-            new UnusedChat(), new UnusedImage(), new UnusedEdit(), new UnusedVideo(), vision, new UnusedContent(),
+            new UnusedChat(), new UnusedImage(), new UnusedEdit(), new UnusedVideo(), new UnusedImageToVideo(), vision, new UnusedContent(),
             new ChatHistoryStore(Options.Create(new ChatOptions())), new UserStateStore(), media,
-            new ProcessedEventStore(cache), msg, new QuickReplyFactory(messages), messages,
+            new ProcessedEventStore(cache), msg, new QuickReplyFactory(messages, app), messages,
             app, NullLogger<WorkProcessor>.Instance);
         return (proc, msg, vision, media, messages);
     }
