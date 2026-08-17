@@ -1,6 +1,6 @@
 # line-hf-bot
 
-A LINE bot that uses **Hugging Face** models for **AI chat, image generation, image editing, and video
+A LINE bot that uses **Hugging Face** models for **AI chat, image generation & editing, image Q&A, and video
 generation** — built on ASP.NET (.NET 10). Run this image on your PC (exposed through a tunnel) or on a cloud
 host, connect it to a LINE Messaging API channel, and chat with Hugging Face models straight from LINE.
 
@@ -45,7 +45,8 @@ Full walkthrough (tunnel, `.env` parameter reference, LINE setup, troubleshootin
 - 💬 **Chat** with conversation history
 - 🎨 **Image generation** — `/image <prompt>` or switch to Image mode
 - 🖼️ **Image editing** — edit a generated image or a photo you send (image-to-image, via fal-ai)
-- 🎬 **Video generation** — `/video <prompt>` (text-to-video, via fal-ai; off by default)
+- 🔍 **Ask about an image** — send a photo and ask a one-shot question (vision/VQA); on by default, same HF credits as chat
+- 🎬 **Video** — `/video <prompt>` (text-to-video) and **🎬 Make a video** from an image (image-to-video), both via fal-ai; off by default
 - 🎛️ A **rich menu** switches modes; **English / Japanese** UI (`App__Locale`)
 
 ## Configuration

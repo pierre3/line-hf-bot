@@ -87,17 +87,22 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 | `HuggingFace__ImageEditEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | 編集の fal 非同期キュー submit 先。`{model}` → `ImageEditModel`。 |
 | `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | text-to-video モデル。**fal-ai はクレジット消費が激しい**。 |
 | `HuggingFace__VideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | 動画の fal 非同期キュー submit 先。`{model}` → `VideoModel`。 |
+| `HuggingFace__ImageToVideoModel` | `fal-ai/wan/v2.2-a14b/image-to-video` | image-to-video（🎬 動画にする）モデル。軽い代替 `fal-ai/wan-i2v`。**fal-ai はクレジット消費が激しく**、A14B は 5B の text-to-video 既定より単価が高い。 |
+| `HuggingFace__ImageToVideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | image-to-video の fal 非同期キュー submit 先。`{model}` → `ImageToVideoModel`。 |
+| `HuggingFace__VisionModel` | `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` | 送信写真への画像 Q&A（💬 この画像について質問）モデル。**provider を pin**（`model:provider`）し HF 設定で有効化する — `auto` だと `model_not_supported`。fal ではなくチャットと同じ HF クレジットを消費。 |
+| `HuggingFace__VisionEndpoint` | `https://router.huggingface.co/v1/chat/completions` | vision 用の OpenAI 互換 chat-completions **フル URL**（`ChatEndpoint` と違い `/v1/chat/completions` を含める）。 |
 | `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | プロバイダ URL からメディア再取得を許可するホスト。ラベル境界一致・**空なら全拒否**。 |
 
-> **hf-inference は image-to-image / text-to-video を提供していません。** これらは **fal-ai**（1 回あたりの単価が高い）が既定です。
-> `VideoEndpoint`/`ImageEditEndpoint` を hf-inference に向けると
+> **hf-inference は image-to-image / text-to-video / image-to-video を提供していません。** これらは **fal-ai**（1 回あたりの単価が高い）が既定です。
+> `VideoEndpoint`/`ImageEditEndpoint`/`ImageToVideoEndpoint` を hf-inference に向けると
 > `400 "Model not supported by provider hf-inference"` になります。
 
 **アプリの挙動**
 
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
-| `App__VideoEnabled` | `false` | `/video` を有効化。fal の text-to-video は**クレジット消費が激しく遅い**ため既定オフ。`true` で許可。 |
+| `App__VideoEnabled` | `false` | 動画を有効化: `/video`（text-to-video）**と** 🎬 動画にする（image-to-video）。どちらも fal-ai で**クレジット消費が激しく遅い**ため既定オフ。`true` で許可。 |
+| `App__VisionEnabled` | `true` | 送信写真への画像 Q&A。オン: 写真受信時に ✏️ 編集 / 💬 この画像について質問 を提示。オフ: 写真は即・編集フロー（vision UI なし）。 |
 | `App__Locale` | `en` | ユーザー向け文言とリッチメニューの言語（`en` / `ja`）。 |
 | `App__RichMenuEnabled` | `true` | 起動時にモード切替リッチメニューを作成（冪等）。`false` で無し。 |
 | `App__MediaTtlMinutes` | `10` | 生成メディアをメモリに保持し `/media/{id}` で配信する時間。 |
@@ -112,7 +117,8 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 | `HuggingFace__ChatTimeoutSeconds` | `60` | チャットのタイムアウト。 |
 | `HuggingFace__ImageTimeoutSeconds` | `120` | text-to-image のタイムアウト。 |
 | `HuggingFace__ImageEditTimeoutSeconds` | `120` | 画像編集のタイムアウト。 |
-| `HuggingFace__VideoTimeoutSeconds` | `300` | 動画のタイムアウト（遅いので余裕を持たせる）。 |
+| `HuggingFace__VideoTimeoutSeconds` | `300` | 動画のタイムアウト（text-to-video・image-to-video とも遅いので余裕を持たせる）。 |
+| `HuggingFace__VisionTimeoutSeconds` | `120` | 画像 Q&A のタイムアウト（コールドの初回は遅いことがある）。 |
 | `Queue__Capacity` | `100` | キューの最大件数。満杯だとユーザーに「混雑中」と通知。 |
 | `Queue__Workers` | `2` | キューを処理する並列ワーカー数。 |
 | `Chat__MaxHistory` | `20` | ユーザーごとに保持する会話ターン数（メモリ内）。 |
@@ -190,7 +196,8 @@ line webhook test-endpoint          # 成功 / 200 になればOK
 2. 普通のメッセージを送る → **チャット**の返信が返る。
 3. `/image a cat on a skateboard` → 生成された**画像**が 🔄 / ✏️ / 💬 ボタン付きで返る。
 4. **✏️ 編集**をタップ（または写真を送る）→ 編集指示を送る → **編集後の画像**（fal-ai、クレジット消費大）。
-5. 任意: `App__VideoEnabled=true` なら `/video 走る猫` → **動画**（fal-ai、クレジット消費が激しく遅い）。
+5. 写真を送って **💬 この画像について質問** をタップ → 質問を送る → テキストの**回答**（画像 Q&A、既定オン）。
+6. 任意: `App__VideoEnabled=true` なら `/video 走る猫` → **動画**、または画像の **🎬 動画にする** をタップ → 短い動画（どちらも fal-ai、クレジット消費が激しく遅い）。
 
 ---
 

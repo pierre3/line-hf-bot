@@ -89,17 +89,23 @@ Everything else has a sensible default and is optional. Add only what you want t
 | `HuggingFace__ImageEditEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | fal async-queue submit endpoint for editing; `{model}` → `ImageEditModel`. |
 | `HuggingFace__VideoModel` | `fal-ai/wan/v2.2-5b/text-to-video` | Text-to-video model. **fal-ai is credit-heavy.** |
 | `HuggingFace__VideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | fal async-queue submit endpoint for video; `{model}` → `VideoModel`. |
+| `HuggingFace__ImageToVideoModel` | `fal-ai/wan/v2.2-a14b/image-to-video` | Image-to-video (🎬 Make a video) model; lighter alternative `fal-ai/wan-i2v`. **fal-ai is credit-heavy**; A14B costs more than the 5B text-to-video default. |
+| `HuggingFace__ImageToVideoEndpoint` | `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue` | fal async-queue submit endpoint for image-to-video; `{model}` → `ImageToVideoModel`. |
+| `HuggingFace__VisionModel` | `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` | Vision Q&A model for sent photos (💬 Ask about this image). **Pin the provider** (`model:provider`) and enable it in HF settings — `auto` fails with `model_not_supported`. Uses chat-level HF credits (not fal). |
+| `HuggingFace__VisionEndpoint` | `https://router.huggingface.co/v1/chat/completions` | OpenAI-compatible chat-completions **full URL** for vision (includes `/v1/chat/completions`, unlike `ChatEndpoint`). |
 | `HuggingFace__MediaRefetchAllowedHosts` | `fal.media;replicate.delivery` | Hosts allowed when the app re-fetches media from a provider URL. Label-boundary match; **empty = deny all**. |
 
-> **hf-inference does not serve image-to-image or text-to-video.** Those default to the **fal-ai**
-> provider (which costs more credits per call). If you point `VideoEndpoint`/`ImageEditEndpoint` at `hf-inference`, you'll get
+> **hf-inference does not serve image-to-image, text-to-video, or image-to-video.** Those default to the
+> **fal-ai** provider (which costs more credits per call). If you point
+> `VideoEndpoint`/`ImageEditEndpoint`/`ImageToVideoEndpoint` at `hf-inference`, you'll get
 > `400 "Model not supported by provider hf-inference"`.
 
 **App behavior**
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `App__VideoEnabled` | `false` | Enable the `/video` command. Off by default because fal text-to-video is **credit-heavy and slow**; set `true` to allow it. |
+| `App__VideoEnabled` | `false` | Enable video: the `/video` command (text-to-video) **and** 🎬 Make a video (image-to-video). Both run on the **credit-heavy, slow** fal-ai provider; set `true` to allow them. |
+| `App__VisionEnabled` | `true` | Vision Q&A on sent photos. On: a sent photo offers ✏️ Edit / 💬 Ask about this image. Off: a sent photo goes straight to editing (no vision UI). |
 | `App__Locale` | `en` | Language of user-facing text and the rich menu (`en` or `ja`). |
 | `App__RichMenuEnabled` | `true` | Provision the mode-switcher rich menu on startup (idempotent). `false` runs without it. |
 | `App__MediaTtlMinutes` | `10` | How long generated media is kept in memory and served at `/media/{id}`. |
@@ -114,7 +120,8 @@ Everything else has a sensible default and is optional. Add only what you want t
 | `HuggingFace__ChatTimeoutSeconds` | `60` | Chat request timeout. |
 | `HuggingFace__ImageTimeoutSeconds` | `120` | Text-to-image timeout. |
 | `HuggingFace__ImageEditTimeoutSeconds` | `120` | Image edit timeout. |
-| `HuggingFace__VideoTimeoutSeconds` | `300` | Video timeout (video is slow — keep this generous). |
+| `HuggingFace__VideoTimeoutSeconds` | `300` | Video timeout (text-to-video and image-to-video are slow — keep this generous). |
+| `HuggingFace__VisionTimeoutSeconds` | `120` | Vision Q&A timeout (a cold first request can be slow). |
 | `Queue__Capacity` | `100` | Max queued jobs; when full the user is told the bot is busy. |
 | `Queue__Workers` | `2` | Number of parallel workers processing the queue. |
 | `Chat__MaxHistory` | `20` | Conversation turns kept per user (in memory). |
@@ -192,7 +199,8 @@ line webhook test-endpoint          # expect success / 200
 2. Send a plain message → you should get a **chat** reply.
 3. Send `/image a cat on a skateboard` → a generated **image** with 🔄 / ✏️ / 💬 buttons.
 4. Tap **✏️ Edit** (or send a photo), then send an edit instruction → an **edited image** (fal-ai, credit-heavy).
-5. Optional: if `App__VideoEnabled=true`, send `/video a running cat` → a **video** (fal-ai, credit-heavy and slow).
+5. Send a photo and tap **💬 Ask about this image**, then ask a question → a text **answer** (vision Q&A; on by default).
+6. Optional: if `App__VideoEnabled=true`, send `/video a running cat` → a **video**, or tap **🎬 Make a video** on an image → an animated clip (both fal-ai, credit-heavy and slow).
 
 ---
 
