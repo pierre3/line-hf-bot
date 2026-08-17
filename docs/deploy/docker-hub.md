@@ -23,7 +23,25 @@ Related: [Azure Container Apps](azure-container-apps.md) for a managed host · [
 
 ---
 
-## 1. Create the `.env` file
+## 1. Expose a public HTTPS URL (get it first)
+
+The app must be reachable from the internet over HTTPS — LINE needs it for both the webhook and the
+`/media/{id}` URLs the bot returns. **Do this first**, because the URL becomes `App__PublicBaseUrl` in the
+next step.
+
+If you're running locally, start a tunnel and keep it running:
+
+```bash
+devtunnel host -p 8080 --allow-anonymous
+```
+
+Copy the `https://…devtunnels.ms` URL it prints. (ngrok or Cloudflare Tunnel work too.) If you're hosting in
+the cloud instead, use the platform's HTTPS endpoint — see the
+[Azure Container Apps guide](azure-container-apps.md).
+
+---
+
+## 2. Create the `.env` file
 
 The container is configured entirely through **environment variables**. The easiest way to supply them is an
 `.env` file passed with `--env-file` (or `env_file:` in Docker Compose).
@@ -31,7 +49,8 @@ The container is configured entirely through **environment variables**. The easi
 Setting names use the pattern `Section__Key` — note the **double underscore** (`__`) between the section and
 the key (e.g. section `App`, key `PublicBaseUrl` → `App__PublicBaseUrl`).
 
-Create a file named `.env`. At minimum, fill in these four:
+Create a file named `.env`. At minimum, fill in these four (paste the tunnel URL from step 1 into
+`App__PublicBaseUrl`):
 
 ```dotenv
 # Required
@@ -104,7 +123,7 @@ Everything else has a sensible default and is optional. Add only what you want t
 
 ---
 
-## 2. Pull and run the image
+## 3. Pull and run the image
 
 The image is published on Docker Hub as [`pierre3/line-hf-bot`](https://hub.docker.com/r/pierre3/line-hf-bot).
 Use `:latest` or pin a version such as `:1.0.0`. (If you run your own build from a fork, substitute your own
@@ -148,20 +167,6 @@ curl http://localhost:8080/health      # -> {"status":"ok"}
 
 > **State is in memory.** Conversation history and generated media live only in the running container and are
 > lost on restart. Run a **single instance** — see [Limitations](../../README.md#limitations).
-
----
-
-## 3. Expose a public HTTPS URL
-
-The app must be reachable from the internet over HTTPS. If you're running it locally, start a tunnel now and
-use its HTTPS URL as `App__PublicBaseUrl` (restart the container after changing `.env`):
-
-```bash
-devtunnel host -p 8080 --allow-anonymous
-```
-
-If you're hosting in the cloud, use the platform's HTTPS endpoint as `App__PublicBaseUrl` (see the
-[Azure Container Apps guide](azure-container-apps.md)).
 
 ---
 

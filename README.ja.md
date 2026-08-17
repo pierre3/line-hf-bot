@@ -44,44 +44,63 @@ LINE は画像に公開 HTTPS URL を要求するため、生成画像はアプ�
 
 ## はじめかた
 
+いちばん手軽なのは、**公開済みの Docker Hub イメージ**をローカルで動かし、トンネルで公開する方法です
+（ソースの取得やビルドは不要）。ほかの方法は[別の動かし方](#別の動かし方)にまとめています。
+
 ### 事前準備
-- **LINE Messaging API チャネル** — **チャネルシークレット**と**長期のチャネルアクセストークン**を取得
+- **LINE Messaging API チャネル** — **チャネルシークレット**と**長期のチャネルアクセストークン**
 - **Hugging Face トークン**（**Inference Providers** 権限つき）
-- 公開 HTTPS URL を作れるトンネル（[Dev Tunnels](https://learn.microsoft.com/azure/developer/dev-tunnels/)、ngrok、Cloudflare Tunnel など）
-- Docker（ローカル開発なら .NET 10 SDK）
+- **Docker**
+- 公開 HTTPS URL を作れるトンネル。以下の手順では [Dev Tunnels](https://learn.microsoft.com/azure/developer/dev-tunnels/)
+  を使います（初回のみ `devtunnel user login`）。ngrok や Cloudflare Tunnel でも構いません。
 
-### 1. 設定
+### 1. トンネルを起動 — 先に公開 URL を確定する
+先にこれを実行し、`.env` を書く前に HTTPS URL を確定させます。起動したままにしておきます:
 ```bash
-cp .env.example .env
-# .env を編集: Line__ChannelSecret, Line__ChannelAccessToken, HuggingFace__ApiKey, App__PublicBaseUrl
+devtunnel host -p 8080 --allow-anonymous
 ```
-`App__PublicBaseUrl` はトンネルの HTTPS ベース URL です（LINE が取りに来る画像 URL を組み立てるのに使います）。
+表示された `https://…devtunnels.ms` の URL を控えます。これが `App__PublicBaseUrl` になります。
 
-### 2. 起動
+### 2. `.env` を作成
+別のターミナルで、控えたトンネル URL を `App__PublicBaseUrl` に貼り、3 つのトークンを埋めます:
 ```bash
-docker compose up --build      # :8080 で待ち受け
+cat > .env <<'EOF'
+Line__ChannelSecret=<チャネルシークレット>
+Line__ChannelAccessToken=<チャネルアクセストークン>
+HuggingFace__ApiKey=hf_xxxxxxxxxxxxxxxxx
+App__PublicBaseUrl=https://<トンネル>.devtunnels.ms
+EOF
 ```
-> 8080 が使用中なら `.env` に `HOST_PORT`（例 `HOST_PORT=8081`）を設定し、下のトンネルも同じポートにします。
+これ以外は既定値で動きます。全一覧は[パラメータ一覧](docs/deploy/docker-hub.ja.md#パラメータ一覧)を参照。
 
-ローカル開発なら: `dotnet run --project LineHfBot --urls http://localhost:8080`（値は `dotnet user-secrets` で設定。`--urls` で下のトンネル手順と同じ 8080 に揃えます）。
-
-### 3. トンネルで公開
+### 3. イメージを取得して起動
 ```bash
-devtunnel host -p 8080 --allow-anonymous     # 表示された https URL を App__PublicBaseUrl にも設定
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
+```
+起動確認（別ターミナルで）:
+```bash
+curl http://localhost:8080/health      # -> {"status":"ok"}
 ```
 
 ### 4. Webhook を設定
-LINE コンソールで「Webhook の利用」をオン（応答メッセージはオフ）にし、Webhook をトンネルに向けます。
-`line` CLI（[Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet)。グローバルツールとして導入）を使うと簡単です:
+LINE コンソールで「**Webhook の利用**」をオン（応答メッセージはオフ）にします。Webhook URL を
+`https://<トンネル>.devtunnels.ms/webhook` に設定するか、`line` CLI
+（[Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet)。.NET SDK が必要）を使います:
 ```bash
 dotnet tool install -g Line.OpenApi.Tools
 line config set default --token "チャネルアクセストークン"
-line webhook set-endpoint --url "https://<トンネル>/webhook"
+line webhook set-endpoint --url "https://<トンネル>.devtunnels.ms/webhook"
 line webhook test-endpoint
 ```
 
 ### 5. 話しかける
-LINE コンソールの QR からボットを友だち追加して、メッセージを送ります。
+LINE コンソールの QR からボットを友だち追加して、メッセージを送ります。詳しい手順・パラメータ一覧・
+トラブルシュートは **[Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)** を参照。
+
+### 別の動かし方
+- **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — マネージドな HTTPS エンドポイントにホスティング（トンネル不要）。
+- **[ソースから動かす](docs/deploy/from-source.ja.md)** — クローンから Docker Compose または `dotnet run` でビルドして起動（開発・カスタマイズ向け）。
 
 ## コマンド
 | 入力 | 動作 |
@@ -112,24 +131,6 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
 | `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video はクレジット消費が激しく遅い。既定 `false`） |
 
-## デプロイ
-公開とホスティングの手順を 2 つのガイドにまとめています（それぞれ日本語版あり）。
-
-- **[Docker Hub から取得して起動 と LINE 設定](docs/deploy/docker-hub.ja.md)** — 公開イメージを取得し、
-  `.env` を設定（全パラメータの一覧つき）して起動し、LINE で一通り確認するまで。公開/CI-CD は付録に記載。
-- **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — Azure CLI でマネージドな HTTPS
-  エンドポイントにホスティング。
-
-クイックスタート（公開イメージを取得して起動）:
-
-```bash
-docker pull pierre3/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
-```
-
-CI/CD も配線済みです。`.github/workflows/ci.yml` が push/PR ごとに build＋test、`.github/workflows/release.yml`
-が `v*` タグ push でマルチアーキイメージを Docker Hub へ公開します（詳細はガイドの付録）。
-
 ## 使っている技術
 - .NET 10 / ASP.NET Minimal API
 - [pierre3/line-openapi-dotnet](https://github.com/pierre3/line-openapi-dotnet)（`Line.OpenApi.Bot`）
@@ -137,7 +138,7 @@ CI/CD も配線済みです。`.github/workflows/ci.yml` が push/PR ごとに b
 - Hugging Face Inference Providers（画像・動画）
 
 ## ドキュメント
-- デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)
+- デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)、[ソースから動かす](docs/deploy/from-source.ja.md)
 - 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
