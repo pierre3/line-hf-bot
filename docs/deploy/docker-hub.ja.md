@@ -22,7 +22,25 @@ Docker Hub の公開イメージを取得し、`.env` で設定して起動し�
 
 ---
 
-## 1. `.env` ファイルを作る
+## 1. 公開 HTTPS URL を用意（先に確定する）
+
+アプリはインターネットから HTTPS で到達できる必要があります — LINE は Webhook にも、ボットが返す
+`/media/{id}` URL にも HTTPS を要求します。**先にこれを実行**してください。この URL が次の手順で
+`App__PublicBaseUrl` になります。
+
+ローカル実行なら、トンネルを起動してそのままにしておきます。
+
+```bash
+devtunnel host -p 8080 --allow-anonymous
+```
+
+表示された `https://…devtunnels.ms` の URL を控えます。（ngrok や Cloudflare Tunnel でも構いません。）
+クラウドでホストする場合は、そのプラットフォームの HTTPS エンドポイントを使います
+（[Azure Container Apps ガイド](azure-container-apps.ja.md)参照）。
+
+---
+
+## 2. `.env` ファイルを作る
 
 コンテナの設定はすべて**環境変数**で行います。渡し方が一番簡単なのは、`--env-file`（または Docker Compose の
 `env_file:`）で読み込む `.env` ファイルです。
@@ -30,7 +48,7 @@ Docker Hub の公開イメージを取得し、`.env` で設定して起動し�
 設定名は `セクション__キー` の形式で、セクションとキーの間は**アンダースコア2つ**（`__`）です
 （例: セクション `App`・キー `PublicBaseUrl` → `App__PublicBaseUrl`）。
 
-`.env` という名前のファイルを作り、最低限この4つを埋めます。
+`.env` という名前のファイルを作り、最低限この4つを埋めます（`App__PublicBaseUrl` には手順 1 のトンネル URL を貼ります）。
 
 ```dotenv
 # 必須
@@ -103,7 +121,7 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 
 ---
 
-## 2. イメージを取得して起動
+## 3. イメージを取得して起動
 
 イメージは Docker Hub の [`pierre3/line-hf-bot`](https://hub.docker.com/r/pierre3/line-hf-bot) で公開しています。
 `:latest` か、`:1.0.0` のような固定バージョンを使います。（fork して自分でビルドしたイメージを使う場合は、
@@ -147,20 +165,6 @@ curl http://localhost:8080/health      # -> {"status":"ok"}
 
 > **状態はメモリ内です。** 会話履歴と生成メディアは稼働中のコンテナ内だけにあり、再起動で消えます。
 > **単一インスタンス**で動かしてください — [制限事項](../../README.ja.md#制限事項)参照。
-
----
-
-## 3. 公開 HTTPS URL を用意
-
-アプリはインターネットから HTTPS で到達できる必要があります。ローカル実行なら、ここでトンネルを起動し、その
-HTTPS URL を `App__PublicBaseUrl` に設定します（`.env` を変えたらコンテナを再作成）。
-
-```bash
-devtunnel host -p 8080 --allow-anonymous
-```
-
-クラウドでホストする場合は、そのプラットフォームの HTTPS エンドポイントを `App__PublicBaseUrl` にします
-（[Azure Container Apps ガイド](azure-container-apps.ja.md)参照）。
 
 ---
 

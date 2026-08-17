@@ -44,44 +44,63 @@ Built for easy, small-scale use — mind these trade-offs:
 
 ## Getting started
 
+The quickest path: run the **published Docker Hub image** locally and expose it with a tunnel — no source
+checkout or build needed. Other options are under [Other ways to run](#other-ways-to-run).
+
 ### Prerequisites
-- A **LINE Messaging API channel** — get its **Channel secret** and a long-lived **Channel access token**
+- A **LINE Messaging API channel** — its **Channel secret** and a long-lived **Channel access token**
 - A **Hugging Face token** with the **Inference Providers** permission
-- A tunnel that gives a public HTTPS URL (e.g. [Dev Tunnels](https://learn.microsoft.com/azure/developer/dev-tunnels/), ngrok, Cloudflare Tunnel)
-- Docker (or the .NET 10 SDK for local dev)
+- **Docker**
+- A tunnel for a public HTTPS URL. The steps below use [Dev Tunnels](https://learn.microsoft.com/azure/developer/dev-tunnels/)
+  (one-time `devtunnel user login`); ngrok or Cloudflare Tunnel work too.
 
-### 1. Configure
+### 1. Start a tunnel — get your public URL first
+Do this first so you know the HTTPS URL before writing `.env`. Keep it running:
 ```bash
-cp .env.example .env
-# edit .env: Line__ChannelSecret, Line__ChannelAccessToken, HuggingFace__ApiKey, App__PublicBaseUrl
+devtunnel host -p 8080 --allow-anonymous
 ```
-`App__PublicBaseUrl` is your tunnel's HTTPS base (used to build image URLs LINE fetches).
+Copy the `https://…devtunnels.ms` URL it prints — that's your `App__PublicBaseUrl`.
 
-### 2. Run
+### 2. Create your `.env`
+In a new terminal, paste the tunnel URL into `App__PublicBaseUrl` and fill in your three tokens:
 ```bash
-docker compose up --build      # listens on :8080
+cat > .env <<'EOF'
+Line__ChannelSecret=<your channel secret>
+Line__ChannelAccessToken=<your channel access token>
+HuggingFace__ApiKey=hf_xxxxxxxxxxxxxxxxx
+App__PublicBaseUrl=https://<your-tunnel>.devtunnels.ms
+EOF
 ```
-> If port 8080 is already in use, set `HOST_PORT` (e.g. `HOST_PORT=8081`) in `.env` and use that same port for the tunnel below.
+Everything else has a sensible default. Full list: [parameter reference](docs/deploy/docker-hub.md#parameter-reference).
 
-For local development instead: `dotnet run --project LineHfBot --urls http://localhost:8080` and use `dotnet user-secrets` for the values (the `--urls` keeps the port at 8080 to match the tunnel step below).
-
-### 3. Expose with a tunnel
+### 3. Pull and run the image
 ```bash
-devtunnel host -p 8080 --allow-anonymous     # note the https URL; also set it as App__PublicBaseUrl
+docker pull pierre3/line-hf-bot:latest
+docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
+```
+Check it's up (in another terminal):
+```bash
+curl http://localhost:8080/health      # -> {"status":"ok"}
 ```
 
-### 4. Set the webhook
-Enable "Use webhook" (and turn off auto-reply) in the LINE console, then point the webhook at your tunnel.
-The `line` CLI ([Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet), installed as a global tool) makes this easy:
+### 4. Point LINE at the webhook
+Enable **Use webhook** (and turn off auto-reply) in the LINE console. Set the webhook URL to
+`https://<your-tunnel>.devtunnels.ms/webhook` there, or use the `line` CLI
+([Line.OpenApi.Tools](https://github.com/pierre3/line-openapi-dotnet), needs the .NET SDK):
 ```bash
 dotnet tool install -g Line.OpenApi.Tools
 line config set default --token "YOUR_CHANNEL_ACCESS_TOKEN"
-line webhook set-endpoint --url "https://<tunnel>/webhook"
+line webhook set-endpoint --url "https://<your-tunnel>.devtunnels.ms/webhook"
 line webhook test-endpoint
 ```
 
 ### 5. Chat
-Add the bot as a friend (QR code in the LINE console) and message it.
+Add the bot as a friend (QR code in the LINE console) and message it. Full walkthrough, parameter
+reference, and troubleshooting: **[Run from Docker Hub](docs/deploy/docker-hub.md)**.
+
+### Other ways to run
+- **[Azure Container Apps](docs/deploy/azure-container-apps.md)** — host on a managed HTTPS endpoint (no tunnel needed).
+- **[Run from source](docs/deploy/from-source.md)** — build from a clone with Docker Compose or `dotnet run`, for development or customization.
 
 ## Commands
 | Input | Result |
@@ -112,25 +131,6 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
 | `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is credit-heavy and slow; default `false`) |
 
-## Deployment
-Two guides cover publishing and hosting the image (each with a Japanese version):
-
-- **[Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md)** — pull the published image, configure
-  `.env` (with a full parameter reference), run it, and verify end-to-end in LINE. Publishing/CI-CD is covered
-  in an appendix.
-- **[Azure Container Apps](docs/deploy/azure-container-apps.md)** — host it on a managed HTTPS endpoint with
-  the Azure CLI.
-
-Quick start (pull & run the published image):
-
-```bash
-docker pull pierre3/line-hf-bot:latest
-docker run --env-file .env -p 8080:8080 pierre3/line-hf-bot:latest
-```
-
-CI/CD is wired up too: `.github/workflows/ci.yml` builds and tests every push/PR; `.github/workflows/release.yml`
-publishes a multi-arch image to Docker Hub when you push a `v*` tag (see the guide's appendix).
-
 ## Tech stack
 - .NET 10 / ASP.NET Minimal API
 - [pierre3/line-openapi-dotnet](https://github.com/pierre3/line-openapi-dotnet) (`Line.OpenApi.Bot`)
@@ -138,7 +138,7 @@ publishes a multi-arch image to Docker Hub when you push a `v*` tag (see the gui
 - Hugging Face Inference Providers (image / video)
 
 ## Documentation
-- Deployment guides: [`docs/deploy/`](docs/deploy/) — [Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md)
+- Deployment guides: [`docs/deploy/`](docs/deploy/) — [Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md), [Run from source](docs/deploy/from-source.md)
 - Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
 - Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)
