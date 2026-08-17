@@ -47,6 +47,22 @@ public sealed class HuggingFaceOptions
     public string ChatEndpoint { get; set; } = "https://router.huggingface.co";
 
     /// <summary>
+    /// Vision (image question answering) model, as a provider-pinned model id ("model:provider"). A
+    /// vision-capable chat model served on the OpenAI-compatible chat completions endpoint. Pin the provider
+    /// explicitly ("...:ovhcloud") because auto-routing may not select a provider that serves the model and
+    /// returns model_not_supported. Availability/capacity is provider-dependent; enable the pinned provider
+    /// in your HF settings, or change to a model:provider your token can serve.
+    /// </summary>
+    public string VisionModel { get; set; } = "Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud";
+
+    /// <summary>
+    /// Full URL of the OpenAI-compatible chat completions endpoint used for vision. Unlike
+    /// <see cref="ChatEndpoint"/> (a base the SK connector extends), this is called directly, so it must
+    /// include the "/v1/chat/completions" path.
+    /// </summary>
+    public string VisionEndpoint { get; set; } = "https://router.huggingface.co/v1/chat/completions";
+
+    /// <summary>
     /// Text-to-image endpoint template. "{model}" is replaced with <see cref="ImageModel"/>.
     /// Image support is provider-dependent; adjust the provider segment/model to one that serves
     /// text-to-image and returns raw image bytes.
@@ -80,6 +96,7 @@ public sealed class HuggingFaceOptions
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int ImageEditTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;
+    public int VisionTimeoutSeconds { get; set; } = 120;
 }
 
 /// <summary>Application-wide settings (section: "App").</summary>
@@ -99,6 +116,15 @@ public sealed class AppOptions
     /// so it ships as opt-in to avoid draining HF Inference credits unexpectedly. Set to true once your HF token has credits to spare.
     /// </summary>
     public bool VideoEnabled { get; set; }
+
+    /// <summary>
+    /// Enable image question answering (vision/VQA) on user-sent photos. On by default: vision runs via the
+    /// same HF Inference chat endpoint as chat (not the credit-heavy fal provider). When on, receiving a photo
+    /// offers "Edit"/"Ask about this image" instead of going straight to editing; when off, the photo goes
+    /// straight to the edit flow (spec04 behavior) and no vision UI is shown. A [Ask] tap fails with the generic
+    /// error if <see cref="HuggingFaceOptions.VisionModel"/> is not servable by your token's provider.
+    /// </summary>
+    public bool VisionEnabled { get; set; } = true;
 
     /// <summary>
     /// UI language for user-facing text and the rich menu images ("en" or "ja").

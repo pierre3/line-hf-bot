@@ -11,8 +11,21 @@ public enum ChatMode
 }
 
 /// <summary>
+/// What the next plain (non-command) message resolves to, when the user has been prompted for one.
+/// <c>Edit</c> = the text is an image-edit instruction (image-to-image); <c>VisionQuestion</c> = the text
+/// is a question about the working image (vision/VQA). <c>None</c> = interpret by the current mode.
+/// Exactly one action is pending at a time (mode switch / command / regenerate clears it).
+/// </summary>
+public enum PendingAction
+{
+    None,
+    Edit,
+    VisionQuestion,
+}
+
+/// <summary>
 /// Per-user interaction state kept in memory: the current mode plus the last image session
-/// (prompt and media id) used by regenerate/edit. Reset on <c>/reset</c> and lost on restart.
+/// (prompt and media id) used by regenerate/edit/vision. Reset on <c>/reset</c> and lost on restart.
 /// </summary>
 public sealed class UserStateStore
 {
@@ -20,13 +33,13 @@ public sealed class UserStateStore
     private sealed class UserState
     {
         public ChatMode Mode;
-        public bool AwaitingEdit;
+        public PendingAction Pending;
         public string? LastPrompt;
         public string? LastImageId;
     }
 
     /// <summary>Immutable snapshot of a user's state for reads.</summary>
-    public readonly record struct Snapshot(ChatMode Mode, bool AwaitingEdit, string? LastPrompt, string? LastImageId);
+    public readonly record struct Snapshot(ChatMode Mode, PendingAction Pending, string? LastPrompt, string? LastImageId);
 
     private readonly ConcurrentDictionary<string, UserState> _byUser = new();
 
@@ -75,29 +88,30 @@ public sealed class UserStateStore
     }
 
     /// <summary>
-    /// Record a user-sent image as the working image and arm the edit flow in one atomic update:
-    /// LastImageId = the stored media id, LastPrompt cleared (regenerate has no prompt to reuse),
-    /// and AwaitingEdit = true so the next plain text is taken as the edit instruction. Single lock
-    /// so a concurrent worker never sees a half-updated state.
+    /// Record a user-sent image as the working image in one atomic update: LastImageId = the stored media id,
+    /// LastPrompt cleared (regenerate has no prompt to reuse), and Pending set as requested. When vision is
+    /// enabled we set <see cref="PendingAction.None"/> and let the user pick edit/ask via quick reply; when
+    /// vision is off we set <see cref="PendingAction.Edit"/> so the next plain text edits the image (spec04
+    /// behavior). Single lock so a concurrent worker never sees a half-updated state.
     /// </summary>
-    public void SetReceivedImage(string userId, string imageId)
+    public void SetReceivedImage(string userId, string imageId, PendingAction pending)
     {
         var s = _byUser.GetOrAdd(userId, static _ => new UserState());
         lock (s)
         {
             s.LastImageId = imageId;
             s.LastPrompt = null;
-            s.AwaitingEdit = true;
+            s.Pending = pending;
         }
     }
 
-    /// <summary>Set/clear the "next text is an edit instruction" flag (used by 3b image editing).</summary>
-    public void SetAwaitingEdit(string userId, bool awaiting)
+    /// <summary>Set what the next plain text resolves to (edit / vision question), or None to clear it.</summary>
+    public void SetPending(string userId, PendingAction pending)
     {
         var s = _byUser.GetOrAdd(userId, static _ => new UserState());
         lock (s)
         {
-            s.AwaitingEdit = awaiting;
+            s.Pending = pending;
         }
     }
 
@@ -105,11 +119,11 @@ public sealed class UserStateStore
     {
         if (!_byUser.TryGetValue(userId, out var s))
         {
-            return new Snapshot(ChatMode.Chat, false, null, null);
+            return new Snapshot(ChatMode.Chat, PendingAction.None, null, null);
         }
         lock (s)
         {
-            return new Snapshot(s.Mode, s.AwaitingEdit, s.LastPrompt, s.LastImageId);
+            return new Snapshot(s.Mode, s.Pending, s.LastPrompt, s.LastImageId);
         }
     }
 

@@ -22,6 +22,16 @@ public sealed class QuickReplyFactory(UserMessages messages)
         ],
     };
 
+    /// <summary>Buttons offered when a user sends a photo (vision enabled): edit it, or ask about it.</summary>
+    public QuickReply ReceivedImageChoices => new()
+    {
+        Items =
+        [
+            Item(messages.LabelEdit, "action=edit"),
+            Item(messages.LabelAsk, "action=ask"),
+        ],
+    };
+
     /// <summary>Buttons under a video result: back to chat.</summary>
     public QuickReply VideoResult => new()
     {

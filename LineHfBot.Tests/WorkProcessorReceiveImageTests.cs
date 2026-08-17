@@ -40,18 +40,20 @@ public class WorkProcessorReceiveImageTests
     { public Task<GeneratedMedia> GenerateAsync(byte[] referenceImage, string instruction, CancellationToken ct) => throw new NotSupportedException(); }
     private sealed class UnusedChat : IChatService
     { public Task<string> CompleteAsync(string userId, string userText, CancellationToken ct) => throw new NotSupportedException(); }
+    private sealed class UnusedVision : IVisionService
+    { public Task<string> AnswerAsync(byte[] image, string mediaType, string question, CancellationToken ct) => throw new NotSupportedException(); }
 
     private static (WorkProcessor Proc, FakeMessenger Msg, UserStateStore State, MediaStore Media, UserMessages Messages)
-        Build(ILineContentService content)
+        Build(ILineContentService content, bool visionEnabled = true)
     {
-        var app = Options.Create(new AppOptions());
+        var app = Options.Create(new AppOptions { VisionEnabled = visionEnabled });
         var cache = new MemoryCache(new MemoryCacheOptions());
         var messages = new UserMessages(app);
         var state = new UserStateStore();
         var media = new MediaStore(cache, app);
         var msg = new FakeMessenger();
         var proc = new WorkProcessor(
-            new UnusedChat(), new UnusedImage(), new UnusedEdit(), new UnusedVideo(), content,
+            new UnusedChat(), new UnusedImage(), new UnusedEdit(), new UnusedVideo(), new UnusedVision(), content,
             new ChatHistoryStore(Options.Create(new ChatOptions())), state, media,
             new ProcessedEventStore(cache), msg, new QuickReplyFactory(messages), messages,
             app, NullLogger<WorkProcessor>.Instance);
@@ -60,20 +62,38 @@ public class WorkProcessorReceiveImageTests
 
     private static WorkItem Item() => new(WorkKind.ReceiveImage, "u1", "rt", "msg-1", "ev-1");
 
+    // Vision off: keep spec04 behavior — store the image, arm the edit flow, ask how to edit.
     [Fact]
-    public async Task Success_stores_image_arms_edit_and_prompts()
+    public async Task VisionDisabled_stores_image_arms_edit_and_prompts()
     {
         var (proc, msg, state, media, messages) = Build(
-            new FakeContent(() => new GeneratedMedia([1, 2, 3], "image/jpeg")));
+            new FakeContent(() => new GeneratedMedia([1, 2, 3], "image/jpeg")), visionEnabled: false);
 
         await proc.ProcessAsync(Item(), CancellationToken.None);
 
         var s = state.Get("u1");
         Assert.NotNull(s.LastImageId);
-        Assert.True(s.AwaitingEdit);
+        Assert.Equal(PendingAction.Edit, s.Pending);
         Assert.Null(s.LastPrompt);
         Assert.True(media.TryGet(s.LastImageId!, out _));
         Assert.Equal(messages.ImageReceived, Assert.Single(msg.Replies));
+    }
+
+    // Vision on: store the image but leave the next action open (user picks edit/ask via quick reply).
+    [Fact]
+    public async Task VisionEnabled_stores_image_and_offers_choices()
+    {
+        var (proc, msg, state, media, messages) = Build(
+            new FakeContent(() => new GeneratedMedia([1, 2, 3], "image/jpeg")), visionEnabled: true);
+
+        await proc.ProcessAsync(Item(), CancellationToken.None);
+
+        var s = state.Get("u1");
+        Assert.NotNull(s.LastImageId);
+        Assert.Equal(PendingAction.None, s.Pending);
+        Assert.Null(s.LastPrompt);
+        Assert.True(media.TryGet(s.LastImageId!, out _));
+        Assert.Equal(messages.ImageReceivedChoose, Assert.Single(msg.Replies));
     }
 
     [Fact]
@@ -86,7 +106,7 @@ public class WorkProcessorReceiveImageTests
 
         Assert.Equal(messages.ImageTooLarge, Assert.Single(msg.Replies));
         var s = state.Get("u1");
-        Assert.False(s.AwaitingEdit);
+        Assert.Equal(PendingAction.None, s.Pending);
         Assert.Null(s.LastImageId);
     }
 
@@ -100,7 +120,7 @@ public class WorkProcessorReceiveImageTests
         await proc.ProcessAsync(Item(), CancellationToken.None);
 
         Assert.Equal(messages.ImageReceiveFailed, Assert.Single(msg.Replies));
-        Assert.False(state.Get("u1").AwaitingEdit);
+        Assert.Equal(PendingAction.None, state.Get("u1").Pending);
     }
 
     [Fact]
