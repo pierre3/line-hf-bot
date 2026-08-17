@@ -13,14 +13,16 @@ public enum ChatMode
 /// <summary>
 /// What the next plain (non-command) message resolves to, when the user has been prompted for one.
 /// <c>Edit</c> = the text is an image-edit instruction (image-to-image); <c>VisionQuestion</c> = the text
-/// is a question about the working image (vision/VQA). <c>None</c> = interpret by the current mode.
-/// Exactly one action is pending at a time (mode switch / command / regenerate clears it).
+/// is a question about the working image (vision/VQA); <c>Animate</c> = the text is a motion instruction
+/// for image-to-video. <c>None</c> = interpret by the current mode. Exactly one action is pending at a time
+/// (mode switch / command / regenerate clears it).
 /// </summary>
 public enum PendingAction
 {
     None,
     Edit,
     VisionQuestion,
+    Animate,
 }
 
 /// <summary>

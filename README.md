@@ -13,10 +13,11 @@ to keep it easy to run: start the Docker image on your PC, expose it through a t
 ## Features
 - 💬 **Chat** with conversation history (Semantic Kernel + Hugging Face)
 - 🎨 **Image generation** — `/image <prompt>`, or switch to Image mode and just send a description
-- 🎬 **Video generation** — `/video <prompt>` (text-to-video) via the **fal-ai** provider. **Off by default** (`App:VideoEnabled`) because fal-ai burns through Hugging Face credits fast and is slow; set it to `true` to enable
+- 🎬 **Video generation** — `/video <prompt>` (text-to-video) and **🎬 Make a video** from an image (image-to-video), both via the **fal-ai** provider. **Off by default** (`App:VideoEnabled` gates both) because fal-ai burns through Hugging Face credits fast and is slow; set it to `true` to enable
+- 🎞️ **Animate an image** (image-to-video) — when video is enabled, image results and sent photos offer **🎬 Make a video**; tap it, describe the motion (e.g. "slowly zoom in"), and the image is turned into a short clip via fal-ai
 - 🎛️ **Mode rich menu** — a bottom menu switches between Chat / Image / Video; a plain message is
-  interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate, ✏️ Edit (image-to-image), and 💬 Chat.
-- 🖼️ **Send a photo** — the bot offers **✏️ Edit** (image-to-image) or **💬 Ask about this image** (vision Q&A). Tap one, then send your instruction or question. (With `App:VisionEnabled=false` a photo goes straight to editing.)
+  interpreted by the current mode, so no prefix is needed. Image results offer 🔄 Regenerate, ✏️ Edit (image-to-image), 🎬 Make a video (when enabled), and 💬 Chat.
+- 🖼️ **Send a photo** — the bot offers **✏️ Edit** (image-to-image), **💬 Ask about this image** (vision Q&A), and **🎬 Make a video** (image-to-video, when enabled). Tap one, then send your instruction, question, or motion. (With `App:VisionEnabled=false` a photo goes straight to editing.)
 - 🔍 **Ask about an image** (vision/VQA) — one-shot question about a photo you sent, answered by a vision model over the same HF Inference credits as chat (not the credit-heavy fal provider). On by default; needs a vision model your token can serve (`HuggingFace:VisionModel`)
 - 🌐 **English by default, Japanese available** (`App:Locale` = `en`/`ja`); user-facing text and the rich menu follow it
 - 🐳 Ships as a Docker image; run locally with a tunnel, or host in the cloud
@@ -107,13 +108,14 @@ reference, and troubleshooting: **[Run from Docker Hub](docs/deploy/docker-hub.m
 | Input | Result |
 | --- | --- |
 | any text | interpreted by the current mode (chat / image / video) |
-| a photo | the bot offers ✏️ Edit / 💬 Ask about this image; tap one, then your next message is applied (`App:VisionEnabled=false` → straight to editing) |
+| a photo | the bot offers ✏️ Edit / 💬 Ask about this image / 🎬 Make a video (when video enabled); tap one, then your next message is applied (`App:VisionEnabled=false` → straight to editing) |
 | `/image <prompt>` | generate an image |
 | `/video <prompt>` | generate a video (text-to-video via fal-ai); off by default, see `App:VideoEnabled` |
+| 🎬 Make a video | turn the working image into a short clip (image-to-video via fal-ai); shown on image results and sent photos when `App:VideoEnabled=true` |
 | `/reset` | clear conversation history and reset mode |
 | `/help` | show usage |
 
-Slash commands work in any mode without changing it. Image results carry 🔄 Regenerate / ✏️ Edit / 💬 Chat buttons.
+Slash commands work in any mode without changing it. Image results carry 🔄 Regenerate / ✏️ Edit / 🎬 Make a video (when enabled) / 💬 Chat buttons.
 
 ## Configuration
 All settings are environment variables (`Section__Key`). See [`.env.example`](.env.example) for the full list; the essentials:
@@ -126,12 +128,13 @@ All settings are environment variables (`Section__Key`). See [`.env.example`](.e
 | `HuggingFace__ChatModel` | default `Qwen/Qwen2.5-7B-Instruct` (non-gated) |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | image-to-image via the **fal-ai** provider (default `fal-ai/qwen-image-edit`). hf-inference doesn't serve image-to-image; fal-ai costs more credits per call than hf-inference |
 | `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | text-to-video via the **fal-ai** provider (default `fal-ai/wan/v2.2-5b/text-to-video`). hf-inference doesn't serve text-to-video; fal-ai is credit-heavy and slow |
+| `HuggingFace__ImageToVideoModel` / `HuggingFace__ImageToVideoEndpoint` | image-to-video via the **fal-ai** provider (default `fal-ai/wan/v2.2-a14b/image-to-video`; lighter alternative `fal-ai/wan-i2v`). hf-inference doesn't serve image-to-video; A14B costs more credits than the 5B text-to-video default. Gated by `App__VideoEnabled` |
 | `HuggingFace__VisionModel` / `HuggingFace__VisionEndpoint` | vision Q&A for sent photos, via a vision chat model on the OpenAI-compatible endpoint. Uses chat-level HF credits (not fal). Pin the provider (`model:provider`) and enable it in HF settings — default `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` needs **ovhcloud** enabled. See [vision troubleshooting](#vision-troubleshooting) |
 | `HuggingFace__MediaRefetchAllowedHosts` | hosts allowed when re-fetching media from a provider URL (default `fal.media;replicate.delivery`; empty = deny all) |
 | `App__PublicBaseUrl` | your tunnel's HTTPS base (required for images) |
 | `App__Locale` | UI language for user-facing text and the rich menu (`en` default, or `ja`) |
 | `App__RichMenuEnabled` | provision the mode rich menu on startup (default `true`) |
-| `App__VideoEnabled` | enable `/video` (fal-ai text-to-video is credit-heavy and slow; default `false`) |
+| `App__VideoEnabled` | enable video: `/video` (text-to-video) **and** 🎬 Make a video (image-to-video). Both run on the credit-heavy, slow fal-ai provider; default `false` |
 | `App__VisionEnabled` | vision Q&A on sent photos (default `true`). On: a sent photo offers Edit/Ask; off: a sent photo goes straight to editing (no vision UI) |
 
 ### Vision troubleshooting
@@ -148,7 +151,7 @@ The "Ask about this image" answer is generated by a vision model on Hugging Face
 
 ## Documentation
 - Deployment guides: [`docs/deploy/`](docs/deploy/) — [Run from Docker Hub & LINE setup](docs/deploy/docker-hub.md), [Azure Container Apps](docs/deploy/azure-container-apps.md), [Run from source](docs/deploy/from-source.md)
-- Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai, 07 image Q&A (vision/VQA)
+- Specs: [`docs/specs/`](docs/specs/) — 01 base bot, 02 image provider, 03 mode / rich menu / i18n, 04 editing user-sent photos, 05 image editing via fal-ai, 06 video via fal-ai, 07 image Q&A (vision/VQA), 08 image-to-video
 - Review records (spec / implementation / security / documentation gates): [`docs/reviews/`](docs/reviews/)
 - Developer guide (architecture notes): [`CLAUDE.md`](CLAUDE.md)
 

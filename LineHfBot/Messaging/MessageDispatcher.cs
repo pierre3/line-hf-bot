@@ -1,8 +1,10 @@
+using LineHfBot.Configuration;
 using LineHfBot.Line;
 using LineHfBot.Queue;
 using LineHfBot.State;
 using LineHfBot.Text;
 using Line.OpenApi.Messaging.Webhook.Generated.Models;
+using Microsoft.Extensions.Options;
 
 namespace LineHfBot.Messaging;
 
@@ -18,6 +20,7 @@ public sealed class MessageDispatcher(
     UserStateStore userState,
     RichMenuManager richMenu,
     UserMessages messages,
+    IOptions<AppOptions> appOptions,
     ILogger<MessageDispatcher> logger)
 {
     public async Task DispatchAsync(CallbackRequest callback, CancellationToken cancellationToken)
@@ -58,7 +61,12 @@ public sealed class MessageDispatcher(
             {
                 if (!string.IsNullOrWhiteSpace(snapshot.LastImageId))
                 {
-                    var pendingKind = snapshot.Pending == PendingAction.VisionQuestion ? WorkKind.Vision : WorkKind.ImageEdit;
+                    var pendingKind = snapshot.Pending switch
+                    {
+                        PendingAction.VisionQuestion => WorkKind.Vision,
+                        PendingAction.Animate => WorkKind.ImageToVideo,
+                        _ => WorkKind.ImageEdit,
+                    };
                     await EnqueueOrBusyAsync(
                         new WorkItem(pendingKind, userId, replyToken, raw, eventId, snapshot.LastImageId),
                         replyToken, cancellationToken);
@@ -183,6 +191,33 @@ public sealed class MessageDispatcher(
                     if (!string.IsNullOrEmpty(replyToken))
                     {
                         await messenger.TryReplyTextAsync(replyToken, messages.VisionPrompt, cancellationToken);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(replyToken))
+                {
+                    await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
+                }
+                break;
+
+            case "animate":
+                // Defensive: the animate button is only shown when video is enabled, but if a stale/forged
+                // postback arrives while disabled, decline up front instead of arming a pending action.
+                if (!appOptions.Value.VideoEnabled)
+                {
+                    if (!string.IsNullOrEmpty(replyToken))
+                    {
+                        await messenger.TryReplyTextAsync(replyToken, messages.NotYetImplemented, cancellationToken);
+                    }
+                    break;
+                }
+                var animateSnap = userState.Get(userId);
+                if (!string.IsNullOrWhiteSpace(animateSnap.LastImageId))
+                {
+                    // Wait for the next plain message; it becomes the motion instruction (image-to-video).
+                    userState.SetPending(userId, PendingAction.Animate);
+                    if (!string.IsNullOrEmpty(replyToken))
+                    {
+                        await messenger.TryReplyTextAsync(replyToken, messages.AnimatePrompt, cancellationToken);
                     }
                 }
                 else if (!string.IsNullOrEmpty(replyToken))

@@ -31,9 +31,9 @@ public class MessageDispatcherTests
         public Task PushVideoAsync(string userId, string originalContentUrl, string previewImageUrl, CancellationToken cancellationToken, QuickReply? quickReply = null) => Task.CompletedTask;
     }
 
-    private static (MessageDispatcher Dispatcher, FakeQueue Queue, FakeMessenger Messenger, UserMessages Messages, UserStateStore State) Build()
+    private static (MessageDispatcher Dispatcher, FakeQueue Queue, FakeMessenger Messenger, UserMessages Messages, UserStateStore State) Build(bool videoEnabled = false)
     {
-        var app = Options.Create(new AppOptions());
+        var app = Options.Create(new AppOptions { VideoEnabled = videoEnabled });
         var line = Options.Create(new LineOptions { ChannelAccessToken = "test-token" });
         var messages = new UserMessages(app);
         var queue = new FakeQueue();
@@ -41,7 +41,7 @@ public class MessageDispatcherTests
         var state = new UserStateStore();
         var richMenu = new RichMenuManager(line, app, NullLogger<RichMenuManager>.Instance);
         var dispatcher = new MessageDispatcher(
-            queue, messenger, state, richMenu, messages, NullLogger<MessageDispatcher>.Instance);
+            queue, messenger, state, richMenu, messages, app, NullLogger<MessageDispatcher>.Instance);
         return (dispatcher, queue, messenger, messages, state);
     }
 
@@ -160,6 +160,80 @@ public class MessageDispatcherTests
         var (dispatcher, queue, _, _, state) = Build();
         state.SetReceivedImage("u1", "img-3", PendingAction.None);
         state.SetPending("u1", PendingAction.VisionQuestion);
+
+        await dispatcher.DispatchAsync(TextEvent("/help"), CancellationToken.None);
+
+        Assert.Equal(WorkKind.Help, Assert.Single(queue.Items).Kind);
+        Assert.Equal(PendingAction.None, state.Get("u1").Pending);
+    }
+
+    private static CallbackRequest PostbackEvent(string data) => new()
+    {
+        Events =
+        [
+            new PostbackEvent
+            {
+                Type = "postback",
+                ReplyToken = "rt",
+                WebhookEventId = "ev-pb",
+                Source = new UserSource { Type = "user", UserId = "u1" },
+                Postback = new PostbackContent { Data = data },
+            },
+        ],
+    };
+
+    // AC#9: with an Animate pending, the next plain text is enqueued as ImageToVideo against the working image.
+    [Fact]
+    public async Task Pending_animate_routes_plain_text_to_ImageToVideo()
+    {
+        var (dispatcher, queue, _, _, state) = Build(videoEnabled: true);
+        state.SetReceivedImage("u1", "img-1", PendingAction.None);
+        state.SetPending("u1", PendingAction.Animate);
+
+        await dispatcher.DispatchAsync(TextEvent("gentle breeze"), CancellationToken.None);
+
+        var item = Assert.Single(queue.Items);
+        Assert.Equal(WorkKind.ImageToVideo, item.Kind);
+        Assert.Equal("gentle breeze", item.Text);
+        Assert.Equal("img-1", item.RefImageId);
+        Assert.Equal(PendingAction.None, state.Get("u1").Pending); // one-shot
+    }
+
+    // AC#9: the animate button arms the pending action (video enabled) and asks for the motion.
+    [Fact]
+    public async Task Animate_postback_arms_pending_when_video_enabled()
+    {
+        var (dispatcher, queue, messenger, messages, state) = Build(videoEnabled: true);
+        state.SetLastImage("u1", "a cat", "img-7");
+
+        await dispatcher.DispatchAsync(PostbackEvent("action=animate"), CancellationToken.None);
+
+        Assert.Empty(queue.Items);
+        Assert.Equal(PendingAction.Animate, state.Get("u1").Pending);
+        Assert.Equal(messages.AnimatePrompt, Assert.Single(messenger.Replies));
+    }
+
+    // AC#10: with video disabled, a (stale/forged) animate postback is declined without arming anything.
+    [Fact]
+    public async Task Animate_postback_declined_when_video_disabled()
+    {
+        var (dispatcher, queue, messenger, messages, state) = Build(videoEnabled: false);
+        state.SetLastImage("u1", "a cat", "img-7");
+
+        await dispatcher.DispatchAsync(PostbackEvent("action=animate"), CancellationToken.None);
+
+        Assert.Empty(queue.Items);
+        Assert.Equal(PendingAction.None, state.Get("u1").Pending);
+        Assert.Equal(messages.NotYetImplemented, Assert.Single(messenger.Replies));
+    }
+
+    // A slash command cancels a pending animate action.
+    [Fact]
+    public async Task Slash_command_cancels_pending_animate()
+    {
+        var (dispatcher, queue, _, _, state) = Build(videoEnabled: true);
+        state.SetReceivedImage("u1", "img-3", PendingAction.None);
+        state.SetPending("u1", PendingAction.Animate);
 
         await dispatcher.DispatchAsync(TextEvent("/help"), CancellationToken.None);
 

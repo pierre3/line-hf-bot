@@ -9,6 +9,7 @@ public enum WorkKind
     ReceiveImage,
     Vision,
     Video,
+    ImageToVideo,
     Reset,
     Help,
 }
@@ -18,9 +19,10 @@ public enum WorkKind
 /// <param name="UserId">Sender's LINE user id.</param>
 /// <param name="ReplyToken">Reply token for the immediate ack (short-lived, single use).</param>
 /// <param name="Text">Prompt text (command prefix already stripped). For ImageEdit this is the edit instruction;
-/// for Vision this is the question about the image; for ReceiveImage this is the LINE messageId of the image to download.</param>
+/// for ImageToVideo this is the motion instruction; for Vision this is the question about the image;
+/// for ReceiveImage this is the LINE messageId of the image to download.</param>
 /// <param name="WebhookEventId">Unique id used for idempotency.</param>
-/// <param name="RefImageId">For ImageEdit/Vision: media id of the reference image (from the last generation or a received photo).</param>
+/// <param name="RefImageId">For ImageEdit/ImageToVideo/Vision: media id of the reference image (from the last generation or a received photo).</param>
 public sealed record WorkItem(
     WorkKind Kind,
     string UserId,
