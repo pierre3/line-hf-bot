@@ -60,6 +60,9 @@ builder.Services.AddHttpClient<IVideoService, HuggingFaceVideoService>(
 builder.Services.AddHttpClient<IImageEditService, HuggingFaceImageEditService>(
         c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient<IVisionService, HuggingFaceVisionService>(
+        c => c.Timeout = System.Threading.Timeout.InfiniteTimeSpan) // per-request timeout is applied in the service
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
 // --- Background queue ---
 builder.Services.AddSingleton<IWorkQueue, ChannelWorkQueue>();

@@ -19,6 +19,7 @@ public sealed class WorkProcessor(
     IImageService imageService,
     IImageEditService imageEditService,
     IVideoService videoService,
+    IVisionService visionService,
     ILineContentService lineContent,
     ChatHistoryStore history,
     UserStateStore userState,
@@ -55,6 +56,9 @@ public sealed class WorkProcessor(
                     break;
                 case WorkKind.ReceiveImage:
                     await HandleReceiveImageAsync(item, cancellationToken);
+                    break;
+                case WorkKind.Vision:
+                    await HandleVisionAsync(item, cancellationToken);
                     break;
                 case WorkKind.Video:
                     if (appOptions.Value.VideoEnabled)
@@ -119,9 +123,10 @@ public sealed class WorkProcessor(
 
     /// <summary>
     /// A user sent a photo (item.Text = LINE messageId): download it, store it in the media cache, and
-    /// make it the working image for editing (LastImageId + AwaitingEdit, atomically), then ask how to
-    /// edit it. The next plain text is handled by the existing edit flow. No PublicBaseUrl is needed
-    /// here — the image is only re-served when an edited result is produced.
+    /// make it the working image. With vision enabled we leave the next action open (Pending=None) and
+    /// offer Edit/Ask via quick reply; with vision disabled we arm the edit flow (Pending=Edit) and ask
+    /// how to edit it (spec04 behavior). No PublicBaseUrl is needed here — the image is only re-served
+    /// when an edited result is produced.
     /// </summary>
     private async Task HandleReceiveImageAsync(WorkItem item, CancellationToken cancellationToken)
     {
@@ -150,8 +155,50 @@ public sealed class WorkProcessor(
         }
 
         var id = mediaStore.Save(media);
-        userState.SetReceivedImage(item.UserId, id);
-        await SendAsync(item, messages.ImageReceived, cancellationToken);
+        if (appOptions.Value.VisionEnabled)
+        {
+            // Let the user choose: edit the photo, or ask a question about it.
+            userState.SetReceivedImage(item.UserId, id, PendingAction.None);
+            await SendAsync(item, messages.ImageReceivedChoose, cancellationToken, quickReplies.ReceivedImageChoices);
+        }
+        else
+        {
+            // Vision off: keep spec04 behavior — the next plain text edits the image.
+            userState.SetReceivedImage(item.UserId, id, PendingAction.Edit);
+            await SendAsync(item, messages.ImageReceived, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Answer a question about the user's working image (vision/VQA). The reference image lives in the TTL
+    /// media cache and may have expired. Vision can be slow, so we ack via the (free) reply token and push
+    /// the answer. The service returns a display-ready string (answer / timeout / empty), so we push it as-is;
+    /// only non-2xx throws and is surfaced as the generic error by the top-level handler. No PublicBaseUrl needed.
+    /// </summary>
+    private async Task HandleVisionAsync(WorkItem item, CancellationToken cancellationToken)
+    {
+        // Idempotency: LINE may redeliver the question text event.
+        if (!processedEvents.TryMarkNew(item.WebhookEventId))
+        {
+            logger.LogInformation("Duplicate Vision event skipped: eventId={EventId}", item.WebhookEventId);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(item.RefImageId) ||
+            !mediaStore.TryGet(item.RefImageId, out var reference) || reference is null)
+        {
+            await SendAsync(item, messages.VisionImageExpired, cancellationToken);
+            return;
+        }
+
+        // Immediate ack via the (free) reply token; the answer is pushed when ready.
+        if (!string.IsNullOrEmpty(item.ReplyToken))
+        {
+            await messenger.TryReplyTextAsync(item.ReplyToken, messages.VisionThinking, cancellationToken);
+        }
+
+        var answer = await visionService.AnswerAsync(reference.Bytes, reference.ContentType, item.Text, cancellationToken);
+        await messenger.PushTextAsync(item.UserId, answer, cancellationToken);
     }
 
     private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)

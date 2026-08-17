@@ -48,17 +48,19 @@ public sealed class MessageDispatcher(
         var raw = (text.Text ?? "").Trim();
         var snapshot = userState.Get(userId);
 
-        // If we're waiting for an edit instruction, the next message resolves it: a plain message is
-        // the instruction (edit the last image); a slash command cancels the edit and runs normally.
-        if (snapshot.AwaitingEdit)
+        // If we're waiting for a follow-up (edit instruction or vision question), the next message resolves
+        // it: a plain message is the instruction/question against the working image; a slash command cancels
+        // the pending action and runs normally.
+        if (snapshot.Pending != PendingAction.None)
         {
-            userState.SetAwaitingEdit(userId, false);
+            userState.SetPending(userId, PendingAction.None);
             if (!raw.StartsWith('/'))
             {
                 if (!string.IsNullOrWhiteSpace(snapshot.LastImageId))
                 {
+                    var pendingKind = snapshot.Pending == PendingAction.VisionQuestion ? WorkKind.Vision : WorkKind.ImageEdit;
                     await EnqueueOrBusyAsync(
-                        new WorkItem(WorkKind.ImageEdit, userId, replyToken, raw, eventId, snapshot.LastImageId),
+                        new WorkItem(pendingKind, userId, replyToken, raw, eventId, snapshot.LastImageId),
                         replyToken, cancellationToken);
                 }
                 else if (!string.IsNullOrEmpty(replyToken))
@@ -84,9 +86,9 @@ public sealed class MessageDispatcher(
     }
 
     /// <summary>
-    /// A user sent a photo. We route it into the image-edit flow: fetch + store happen in the worker
-    /// (keeping the webhook fast), which then arms AwaitingEdit and asks how to edit it. The image is
-    /// accepted regardless of the current mode (sending a photo is an unambiguous edit intent).
+    /// A user sent a photo. Fetch + store happen in the worker (keeping the webhook fast), which then either
+    /// offers Edit/Ask (vision enabled) or arms the edit flow directly (vision disabled). The image is
+    /// accepted regardless of the current mode (sending a photo is an unambiguous edit/ask intent).
     /// </summary>
     private async Task HandleImageReceiveAsync(MessageEvent me, ImageMessageContent img, CancellationToken cancellationToken)
     {
@@ -130,7 +132,7 @@ public sealed class MessageDispatcher(
         switch (action)
         {
             case "mode" when data.TryGetValue("value", out var value) && TryParseMode(value, out var mode):
-                userState.SetAwaitingEdit(userId, false); // switching mode cancels a pending edit
+                userState.SetPending(userId, PendingAction.None); // switching mode cancels a pending edit/question
                 userState.SetMode(userId, mode);
                 await richMenu.SyncUserMenuAsync(userId, mode, cancellationToken);
                 logger.LogInformation("mode change: user={User} mode={Mode}", userId, mode);
@@ -141,7 +143,7 @@ public sealed class MessageDispatcher(
                 break;
 
             case "regen":
-                userState.SetAwaitingEdit(userId, false); // regenerate cancels a pending edit
+                userState.SetPending(userId, PendingAction.None); // regenerate cancels a pending edit/question
                 var snapshot = userState.Get(userId);
                 if (!string.IsNullOrWhiteSpace(snapshot.LastPrompt))
                 {
@@ -160,10 +162,27 @@ public sealed class MessageDispatcher(
                 if (!string.IsNullOrWhiteSpace(editSnap.LastImageId))
                 {
                     // Wait for the next plain message; it becomes the edit instruction.
-                    userState.SetAwaitingEdit(userId, true);
+                    userState.SetPending(userId, PendingAction.Edit);
                     if (!string.IsNullOrEmpty(replyToken))
                     {
                         await messenger.TryReplyTextAsync(replyToken, messages.EditPrompt, cancellationToken);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(replyToken))
+                {
+                    await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
+                }
+                break;
+
+            case "ask":
+                var askSnap = userState.Get(userId);
+                if (!string.IsNullOrWhiteSpace(askSnap.LastImageId))
+                {
+                    // Wait for the next plain message; it becomes the question about the image.
+                    userState.SetPending(userId, PendingAction.VisionQuestion);
+                    if (!string.IsNullOrEmpty(replyToken))
+                    {
+                        await messenger.TryReplyTextAsync(replyToken, messages.VisionPrompt, cancellationToken);
                     }
                 }
                 else if (!string.IsNullOrEmpty(replyToken))
