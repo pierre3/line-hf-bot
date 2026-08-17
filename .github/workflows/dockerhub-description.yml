@@ -1,0 +1,32 @@
+name: Sync Docker Hub description
+
+# Pushes DOCKERHUB.md (and the short description) to the Docker Hub repository's Overview.
+# Runs when DOCKERHUB.md changes on main, or manually via the Actions tab.
+#
+# Requires two repository secrets:
+#   DOCKERHUB_USERNAME  - Docker Hub account/namespace (also the image namespace)
+#   DOCKERHUB_TOKEN     - a Docker Hub access token. NOTE: updating the description needs
+#                         read/write/delete scope (broader than the release push, which
+#                         only needs read/write). Regenerate the token with delete scope
+#                         if this step 403s.
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'DOCKERHUB.md', '.github/workflows/dockerhub-description.yml' ]
+  workflow_dispatch:
+
+jobs:
+  description:
+    name: Update Overview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/line-hf-bot
+          readme-filepath: ./DOCKERHUB.md
+          short-description: "LINE bot bringing Hugging Face AI (chat, image gen/edit, video) to LINE. .NET 10, run via Docker."

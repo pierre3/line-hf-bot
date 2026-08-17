@@ -12,4 +12,5 @@ docs/
 .env.*
 !.env.example
 README*.md
+DOCKERHUB.md
 LICENSE
