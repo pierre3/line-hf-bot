@@ -110,9 +110,9 @@ public class VisionServiceTests
     public void Vision_defaults_match_docs()
     {
         var o = new HuggingFaceOptions();
-        Assert.Equal("Qwen/Qwen2.5-VL-7B-Instruct", o.VisionModel);
+        Assert.Equal("Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud", o.VisionModel);
         Assert.Equal("https://router.huggingface.co/v1/chat/completions", o.VisionEndpoint);
-        Assert.Equal(60, o.VisionTimeoutSeconds);
+        Assert.Equal(120, o.VisionTimeoutSeconds);
         Assert.True(new AppOptions().VisionEnabled);
     }
 }

@@ -126,13 +126,19 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal-ai は hf-inference より 1 回あたりのクレジット単価が高い |
 | `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal-ai はクレジット消費が激しく遅い |
-| `HuggingFace__VisionModel` / `HuggingFace__VisionEndpoint` | 送信写真への画像 Q&A。OpenAI 互換エンドポイント上の vision チャットモデル（既定 `Qwen/Qwen2.5-VL-7B-Instruct`）。fal ではなくチャットと同じ HF クレジットを消費。availability は provider 依存で、トークンが利用できないと「質問」ボタンは汎用エラーになる |
+| `HuggingFace__VisionModel` / `HuggingFace__VisionEndpoint` | 送信写真への画像 Q&A。OpenAI 互換エンドポイント上の vision チャットモデル。fal ではなくチャットと同じ HF クレジットを消費。**provider を pin（`model:provider`）し HF 設定で有効化**する（既定 `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` は **ovhcloud** の有効化が必要）。→[vision トラブルシュート](#vision-トラブルシュート) |
 | `HuggingFace__MediaRefetchAllowedHosts` | プロバイダ URL からのメディア再取得を許可するホスト（既定 `fal.media;replicate.delivery`、空なら全拒否） |
 | `App__PublicBaseUrl` | トンネルの HTTPS ベース URL（画像に必須） |
 | `App__Locale` | ユーザー向け文言とリッチメニューの言語（既定 `en`、`ja` 可） |
 | `App__RichMenuEnabled` | 起動時にモード切替リッチメニューを作成（既定 `true`） |
 | `App__VideoEnabled` | `/video` を有効化（fal-ai の text-to-video はクレジット消費が激しく遅い。既定 `false`） |
 | `App__VisionEnabled` | 送信写真への画像 Q&A（既定 `true`）。オン: 写真受信時に 編集/質問 を提示。オフ: 写真は即・編集フロー（vision UI なし） |
+
+### vision トラブルシュート
+「この画像について質問」の回答は Hugging Face Inference Providers 上の vision モデルが生成するため、そのプロバイダがあなたのトークンでモデルを配信しているかに依存します。質問が失敗する場合:
+- **`model_not_supported`** — auto ルーティングがプロバイダを選べていない。`HuggingFace__VisionModel` は必ず `model:provider` 形式で provider を pin し（例 `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud`）、そのプロバイダを https://huggingface.co/settings/inference-providers で有効化する。
+- **`capacity_exhausted`(503) / タイムアウト** — プロバイダが混雑 or コールド。再試行するか、別プロバイダ/モデルへ。動作確認済みの代替: `zai-org/GLM-4.5V:novita`、`google/gemma-3-27b-it:deepinfra`（gemma はライセンス同意が必要）、`Qwen/Qwen2.5-VL-7B-Instruct:featherless-ai`。切替先プロバイダを先に有効化すること。
+- コールドの初回は遅いことがある。`HuggingFace__VisionTimeoutSeconds`（既定 120）で上限。
 
 ## 使っている技術
 - .NET 10 / ASP.NET Minimal API

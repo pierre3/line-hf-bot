@@ -37,9 +37,9 @@ ASP.NET (.NET 10, Minimal API) で実装し、Docker Hub で公開。個人・�
   `HuggingFace__ImageEndpoint`(text-to-image。`{model}` を ImageModel で置換。既定 `https://router.huggingface.co/hf-inference/models/{model}`。プロバイダ依存),
   `HuggingFace__VideoModel`(既定 `fal-ai/wan/v2.2-5b/text-to-video`。text-to-video の fal プロバイダモデルID) / `VideoEndpoint`(既定 `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue`。fal 非同期キューの submit 先。`{model}` 置換。hf-inference は text-to-video 非対応。**fal はクレジット消費が激しい**),
   `HuggingFace__ImageEditModel`(既定 `fal-ai/qwen-image-edit`。image-to-image の fal プロバイダモデルID) / `ImageEditEndpoint`(既定 `https://router.huggingface.co/fal-ai/{model}?_subdomain=queue`。fal 非同期キューの submit 先。`{model}` 置換。**fal はクレジット消費が激しい**),
-  `HuggingFace__VisionModel`(既定 `Qwen/Qwen2.5-VL-7B-Instruct`。送信写真への画像 Q&A に使う vision チャットモデル。provider 依存＝利用不可なら「質問」は汎用 Error) / `VisionEndpoint`(既定 `https://router.huggingface.co/v1/chat/completions`。OpenAI 互換 chat completions の**フル URL**。ChatEndpoint と違い直叩きなので `/v1/chat/completions` を含める),
+  `HuggingFace__VisionModel`(既定 `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud`。送信写真への画像 Q&A に使う vision チャットモデル。**provider を pin（`model:provider`）し HF 設定で有効化が必要**＝auto だと `model_not_supported`／混雑時 503 `capacity_exhausted`。代替 pin 例=`zai-org/GLM-4.5V:novita`・`google/gemma-3-27b-it:deepinfra`) / `VisionEndpoint`(既定 `https://router.huggingface.co/v1/chat/completions`。OpenAI 互換 chat completions の**フル URL**。ChatEndpoint と違い直叩きなので `/v1/chat/completions` を含める),
   `HuggingFace__MediaRefetchAllowedHosts`(既定 `fal.media;replicate.delivery`。JSON-URL 応答の再取得を許可するホスト。画像・動画共通。ラベル境界一致・**空なら全拒否**),
-  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `ImageEditTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300) / `VisionTimeoutSeconds`(60)
+  `HuggingFace__ChatTimeoutSeconds`(60) / `ImageTimeoutSeconds`(120) / `ImageEditTimeoutSeconds`(120) / `VideoTimeoutSeconds`(300) / `VisionTimeoutSeconds`(120)
 - `App__PublicBaseUrl`(https 必須), `App__MediaTtlMinutes`(10), `App__VideoEnabled`(既定 false。text-to-video は fal-ai 経由＝クレジット消費が激しく遅いため既定オフ・opt-in。true で `/video` 有効化),
   `App__VisionEnabled`(既定 **true**。送信写真への画像 Q&A。true で写真受信時に 編集/質問 の QuickReply 分岐、false で従来どおり即・編集＝vision UI なし。**既定 ON なので写真受信 UX が spec04 から変わる**。fal 非依存でクレジット軽い),
   `App__Locale`(ユーザー向け文言＋リッチメニューの言語。既定 `en`、`ja` 可), `App__RichMenuEnabled`(既定 true。起動時のリッチメニュー provisioning)

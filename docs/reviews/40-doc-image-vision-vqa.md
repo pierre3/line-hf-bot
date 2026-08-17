@@ -27,3 +27,9 @@ Verdict: PASS
 spec07 の追加設定（`HuggingFace__VisionModel`/`VisionEndpoint`/`VisionTimeoutSeconds`、`App__VisionEnabled`）が実コード既定値・appsettings.json・.env.example・README(EN/JA)・CLAUDE.md の全てで過不足なく一致。重点確認 (1)既定値一致 (2)既定 true の UX 変更明記 (3)provider 依存で汎用 Error (4)fal 非依存=チャット同等クレジット (5)言語ルール (6)秘密情報非混入 をいずれも充足。エンドポイント・XMLドキュメント・コメント・DI 登録も実装と齟齬なし。唯一の Minor#1（Commands 表の内部矛盾）は本レビューで修正済み。
 
 spec07 は4ゲート全 PASS（37 仕様 / 38 実装 / 39 セキュリティ / 40 ドキュメント）。
+
+## 追記（2026-08-17・実機検証後の既定変更）
+本ゲート時点の既定値（`VisionModel=Qwen/Qwen2.5-VL-7B-Instruct`・`VisionTimeoutSeconds=60`）は、実機 LINE テストで判明した provider 都合により変更した（コード/appsettings/.env.example/README(EN/JA)/CLAUDE.md/spec07§6・§6.1・テストを一括更新済み・整合維持）:
+- `Qwen2.5-VL-7B` は HF 上 **Featherless のみ配信**で、auto ルーティングだと `400 model_not_supported`、pin しても `503 capacity_exhausted`/コールドで慢性的に不安定だった。
+- → 既定を **`Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud`**（provider pin 付き・実機で ~10 秒応答・日本語に強い・非 gated）に変更、`VisionTimeoutSeconds` を **60→120**（VL コールドスタート耐性）に。
+- README(EN/JA)・spec07§6.1 に vision トラブルシュート（pin 必須／provider 有効化／capacity 時は別 provider へ・動作確認済み代替）を追記。`503` 自動リトライは初版見送り（慢性キャパには効かず別 provider 切替が確実）。

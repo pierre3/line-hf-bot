@@ -47,10 +47,13 @@ public sealed class HuggingFaceOptions
     public string ChatEndpoint { get; set; } = "https://router.huggingface.co";
 
     /// <summary>
-    /// Vision (image question answering) model. A vision-capable chat model served on the OpenAI-compatible
-    /// chat completions endpoint. Availability is provider-dependent; change to a model your HF token can serve.
+    /// Vision (image question answering) model, as a provider-pinned model id ("model:provider"). A
+    /// vision-capable chat model served on the OpenAI-compatible chat completions endpoint. Pin the provider
+    /// explicitly ("...:ovhcloud") because auto-routing may not select a provider that serves the model and
+    /// returns model_not_supported. Availability/capacity is provider-dependent; enable the pinned provider
+    /// in your HF settings, or change to a model:provider your token can serve.
     /// </summary>
-    public string VisionModel { get; set; } = "Qwen/Qwen2.5-VL-7B-Instruct";
+    public string VisionModel { get; set; } = "Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud";
 
     /// <summary>
     /// Full URL of the OpenAI-compatible chat completions endpoint used for vision. Unlike
@@ -93,7 +96,7 @@ public sealed class HuggingFaceOptions
     public int ImageTimeoutSeconds { get; set; } = 120;
     public int ImageEditTimeoutSeconds { get; set; } = 120;
     public int VideoTimeoutSeconds { get; set; } = 300;
-    public int VisionTimeoutSeconds { get; set; } = 60;
+    public int VisionTimeoutSeconds { get; set; } = 120;
 }
 
 /// <summary>Application-wide settings (section: "App").</summary>

@@ -87,14 +87,22 @@
 ## 6. 設定変更（新規キー）
 | キー | 既定 | 説明 |
 |---|---|---|
-| `HuggingFace__VisionModel` | `Qwen/Qwen2.5-VL-7B-Instruct` | vision 対応チャットモデル。operator が差し替え可（provider 依存で availability は変わる）。 |
+| `HuggingFace__VisionModel` | `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud` | vision 対応チャットモデル。**provider を pin（`model:provider`）**する（auto ルーティングだと `model_not_supported` になり得るため。§6.1 参照）。operator が差し替え可（pin 先 provider の有効化が必要）。 |
 | `HuggingFace__VisionEndpoint` | `https://router.huggingface.co/v1/chat/completions` | OpenAI 互換 chat completions のフル URL（`ChatEndpoint` は SK が `/v1/chat/completions` を付与する base のみのため、direct 呼び出し用に別途フル URL を持つ）。 |
-| `HuggingFace__VisionTimeoutSeconds` | `60` | vision 呼び出しの打ち切り。 |
+| `HuggingFace__VisionTimeoutSeconds` | `120` | vision 呼び出しの打ち切り（VL のコールドスタート耐性で image-edit と同値）。 |
 | `App__VisionEnabled` | `true` | 写真受信時の [質問] 分岐と vision フローの有効化。`false` で spec04 の即・編集挙動に戻す（vision 文言/ボタンを一切出さない）。 |
 
 - `appsettings.json` / `.env.example` / README(EN/JA) / CLAUDE.md に反映。
 - **既定 ON の影響（要ドキュメント明記）**: `VisionEnabled=true` により**全ユーザーの写真受信 UX が spec04 から変わる**（即・編集 → [編集]/[質問] choices）。この既定挙動変更を CLAUDE.md/README に明記する（AC13 の既存テスト更新とセット）。
-- ※ vision は **fal ではなくチャットと同じ HF Inference**（クレジット消費はチャット並みで fal ほど重くない）ため既定 ON とする。ただし vision 対応モデルの利用には**トークンの provider 権限/availability が必要**で、既定 `VisionModel` が利用不可の環境では [質問]→**汎用 `Error`** に落ちる（非2xx を surface）。この失敗時挙動と、対応モデルへの差し替え方法を README に明記。無効化は `App__VisionEnabled=false`。
+- ※ vision は **fal ではなくチャットと同じ HF Inference**（クレジット消費はチャット並みで fal ほど重くない）ため既定 ON とする。ただし vision 対応モデルの利用には**トークンの provider 権限/availability が必要**で、pin 先 provider が利用不可/混雑の環境では [質問]→**汎用 `Error`**（非2xx を surface）や `Timeout` に落ちる。この失敗時挙動と、対応モデルへの差し替え方法を README に明記。無効化は `App__VisionEnabled=false`。
+
+### 6.1 provider 選択の実運用メモ（実機検証 2026-08-17）
+既定 `VisionModel` を **provider pin 付き**（`model:provider`）にする理由と運用手順:
+- **pin 必須**: pin なし（`Qwen/Qwen2.5-VL-7B-Instruct` 等）だと router の auto ルーティングが provider を選べず `400 model_not_supported`。→ `model:provider` で明示（`ImageEditModel`/`VideoModel` が fal を明示 pin するのと同じ）。
+- **provider の有効化**: pin 先 provider を https://huggingface.co/settings/inference-providers で有効化しておく（fal を有効化するのと同じ）。
+- **キャパ/コールド**: 無料/現行枠では provider がキャパ不足で `503 capacity_exhausted` やコールドスタートで遅延することがある（実機で Featherless の Qwen2.5-VL-7B が慢性キャパ不足だった）。→ 別 provider の VL に逃がす。動作確認済み: 既定 **`Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud`**（~10秒で応答・日本語に強い・非 gated）、代替 `zai-org/GLM-4.5V:novita`・`google/gemma-3-27b-it:deepinfra`（gemma は license 同意要）・`Qwen/Qwen2.5-VL-7B-Instruct:featherless-ai`。
+- タイムアウトは `VisionTimeoutSeconds`（既定 120）で VL コールドスタートを吸収。
+- （見送り）`503 capacity_exhausted` の自動リトライは初版では入れない。慢性キャパ不足には効かず、別 provider 切替が確実なため。
 
 ## 7. セキュリティ観点
 - **新たな SSRF 面はない**: 送信先は HF router のみ（Bearer 付き）。fal のような結果 URL 再取得（`MediaRefetch`）は発生しない。
