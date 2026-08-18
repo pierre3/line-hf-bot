@@ -80,9 +80,12 @@ var app = builder.Build();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // Serve generated media (LINE fetches image/video from here). 404 when expired/unknown.
+// enableRangeProcessing sends Accept-Ranges and answers Range requests with 206 Partial Content:
+// LINE's inline video player streams via range requests (and seeks to a trailing moov atom, common in
+// fal-generated mp4s), so without range support the video plays black inline while a full download works.
 app.MapGet("/media/{id}", (string id, MediaStore store) =>
     store.TryGet(id, out var media) && media is not null
-        ? Results.File(media.Bytes, media.ContentType)
+        ? Results.File(media.Bytes, media.ContentType, enableRangeProcessing: true)
         : Results.NotFound());
 
 // Placeholder preview image required for LINE video messages.
