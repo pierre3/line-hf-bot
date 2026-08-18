@@ -13,4 +13,5 @@ docs/
 !.env.example
 README*.md
 DOCKERHUB.md
+CHANGELOG.md
 LICENSE
