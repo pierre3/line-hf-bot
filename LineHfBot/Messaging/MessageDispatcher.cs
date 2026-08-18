@@ -51,46 +51,60 @@ public sealed class MessageDispatcher(
         var raw = (text.Text ?? "").Trim();
         var snapshot = userState.Get(userId);
 
-        // If we're waiting for a follow-up (edit instruction or vision question), the next message resolves
-        // it: a plain message is the instruction/question against the working image; a slash command cancels
-        // the pending action and runs normally.
+        // A leading slash is an explicit command override: it cancels any pending follow-up and ends any
+        // conversational vision session, then runs the command. It does not change the current mode.
+        if (raw.StartsWith('/'))
+        {
+            userState.SetPending(userId, PendingAction.None);
+            userState.ClearVisionSession(userId);
+            var (cmdKind, cmdBody) = ParseCommand(raw);
+            await EnqueueOrBusyAsync(new WorkItem(cmdKind, userId, replyToken, cmdBody, eventId), replyToken, cancellationToken);
+            return;
+        }
+
+        // Priority 1: a pending follow-up (edit instruction, vision question, or motion instruction). The next
+        // plain message resolves it against the working image, one-shot.
         if (snapshot.Pending != PendingAction.None)
         {
             userState.SetPending(userId, PendingAction.None);
-            if (!raw.StartsWith('/'))
+            if (!string.IsNullOrWhiteSpace(snapshot.LastImageId))
             {
-                if (!string.IsNullOrWhiteSpace(snapshot.LastImageId))
+                var pendingKind = snapshot.Pending switch
                 {
-                    var pendingKind = snapshot.Pending switch
-                    {
-                        PendingAction.VisionQuestion => WorkKind.Vision,
-                        PendingAction.Animate => WorkKind.ImageToVideo,
-                        _ => WorkKind.ImageEdit,
-                    };
-                    await EnqueueOrBusyAsync(
-                        new WorkItem(pendingKind, userId, replyToken, raw, eventId, snapshot.LastImageId),
-                        replyToken, cancellationToken);
-                }
-                else if (!string.IsNullOrEmpty(replyToken))
-                {
-                    await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
-                }
-                return;
+                    PendingAction.VisionQuestion => WorkKind.Vision,
+                    PendingAction.Animate => WorkKind.ImageToVideo,
+                    _ => WorkKind.ImageEdit,
+                };
+                await EnqueueOrBusyAsync(
+                    new WorkItem(pendingKind, userId, replyToken, raw, eventId, snapshot.LastImageId),
+                    replyToken, cancellationToken);
             }
+            else if (!string.IsNullOrEmpty(replyToken))
+            {
+                await messenger.TryReplyTextAsync(replyToken, messages.EditNoImage, cancellationToken);
+            }
+            return;
         }
 
-        // A leading slash is an explicit command override; it does not change the current mode.
-        // Otherwise the message is interpreted by the user's current mode.
-        var (kind, body) = raw.StartsWith('/')
-            ? ParseCommand(raw)
-            : snapshot.Mode switch
-            {
-                ChatMode.Image => (WorkKind.Image, raw),
-                ChatMode.Video => (WorkKind.Video, raw),
-                _ => (WorkKind.Chat, raw),
-            };
+        // Priority 2: an active conversational vision session (spec09). A plain message is a follow-up question
+        // about the same image, regardless of the current mode; the worker resends the accumulated context.
+        if (snapshot.VisionActive)
+        {
+            await EnqueueOrBusyAsync(
+                new WorkItem(WorkKind.Vision, userId, replyToken, raw, eventId, snapshot.VisionImageId),
+                replyToken, cancellationToken);
+            return;
+        }
 
-        await EnqueueOrBusyAsync(new WorkItem(kind, userId, replyToken, body, eventId), replyToken, cancellationToken);
+        // Priority 3: interpret the message by the user's current mode.
+        var kind = snapshot.Mode switch
+        {
+            ChatMode.Image => WorkKind.Image,
+            ChatMode.Video => WorkKind.Video,
+            _ => WorkKind.Chat,
+        };
+
+        await EnqueueOrBusyAsync(new WorkItem(kind, userId, replyToken, raw, eventId), replyToken, cancellationToken);
     }
 
     /// <summary>
@@ -152,6 +166,7 @@ public sealed class MessageDispatcher(
 
             case "regen":
                 userState.SetPending(userId, PendingAction.None); // regenerate cancels a pending edit/question
+                userState.ClearVisionSession(userId);            // and ends any vision session
                 var snapshot = userState.Get(userId);
                 if (!string.IsNullOrWhiteSpace(snapshot.LastPrompt))
                 {
@@ -170,6 +185,7 @@ public sealed class MessageDispatcher(
                 if (!string.IsNullOrWhiteSpace(editSnap.LastImageId))
                 {
                     // Wait for the next plain message; it becomes the edit instruction.
+                    userState.ClearVisionSession(userId); // arming an edit ends any vision session
                     userState.SetPending(userId, PendingAction.Edit);
                     if (!string.IsNullOrEmpty(replyToken))
                     {
@@ -214,6 +230,7 @@ public sealed class MessageDispatcher(
                 if (!string.IsNullOrWhiteSpace(animateSnap.LastImageId))
                 {
                     // Wait for the next plain message; it becomes the motion instruction (image-to-video).
+                    userState.ClearVisionSession(userId); // arming an animate ends any vision session
                     userState.SetPending(userId, PendingAction.Animate);
                     if (!string.IsNullOrEmpty(replyToken))
                     {

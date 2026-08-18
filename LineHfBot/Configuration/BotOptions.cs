@@ -147,6 +147,14 @@ public sealed class AppOptions
     public bool VisionEnabled { get; set; } = true;
 
     /// <summary>
+    /// Maximum number of Q&amp;A turns kept in a conversational vision session (spec09). Each follow-up resends
+    /// the image plus prior turns to the stateless endpoint, so credit cost grows with turn count; this caps it.
+    /// Values below 1 are treated as 1. Separate axis from <see cref="ChatOptions.MaxHistory"/> (vision turns
+    /// carry an image and cost more per turn).
+    /// </summary>
+    public int VisionMaxTurns { get; set; } = 8;
+
+    /// <summary>
     /// UI language for user-facing text and the rich menu images ("en" or "ja").
     /// English is the default for the published image; set to "ja" for Japanese.
     /// </summary>

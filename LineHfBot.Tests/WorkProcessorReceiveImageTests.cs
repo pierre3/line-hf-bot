@@ -43,7 +43,7 @@ public class WorkProcessorReceiveImageTests
     private sealed class UnusedChat : IChatService
     { public Task<string> CompleteAsync(string userId, string userText, CancellationToken ct) => throw new NotSupportedException(); }
     private sealed class UnusedVision : IVisionService
-    { public Task<string> AnswerAsync(byte[] image, string mediaType, string question, CancellationToken ct) => throw new NotSupportedException(); }
+    { public Task<string> AnswerAsync(byte[] image, string mediaType, IReadOnlyList<VisionTurn> history, string question, CancellationToken ct) => throw new NotSupportedException(); }
 
     private static (WorkProcessor Proc, FakeMessenger Msg, UserStateStore State, MediaStore Media, UserMessages Messages)
         Build(ILineContentService content, bool visionEnabled = true)

@@ -2,21 +2,25 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using LineHfBot.Configuration;
+using LineHfBot.State;
 using LineHfBot.Text;
 using Microsoft.Extensions.Options;
 
 namespace LineHfBot.Ai;
 
-/// <summary>Answers a text question about a user-sent image (vision / VQA).</summary>
+/// <summary>Answers a text question about a user-sent image (vision / VQA), optionally as a follow-up
+/// in a conversational session (spec09).</summary>
 public interface IVisionService
 {
     /// <summary>
-    /// Returns a display-ready answer string. On the internal timeout it returns the localized
+    /// Returns a display-ready answer string. <paramref name="history"/> is the prior Q&amp;A in this vision
+    /// session (empty for the first turn); the endpoint is stateless, so the full conversation is resent each
+    /// time with the image attached to the first user turn only. On the internal timeout it returns the localized
     /// "timeout" message and on an empty model reply the "no answer" message (same contract as
     /// <see cref="HuggingFaceChatService"/>). Non-2xx responses throw so the caller's top-level
     /// handler can notify the user with the generic error.
     /// </summary>
-    Task<string> AnswerAsync(byte[] image, string mediaType, string question, CancellationToken cancellationToken);
+    Task<string> AnswerAsync(byte[] image, string mediaType, IReadOnlyList<VisionTurn> history, string question, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -33,7 +37,7 @@ public sealed class HuggingFaceVisionService(
     IOptions<HuggingFaceOptions> options,
     UserMessages messages) : IVisionService
 {
-    public async Task<string> AnswerAsync(byte[] image, string mediaType, string question, CancellationToken cancellationToken)
+    public async Task<string> AnswerAsync(byte[] image, string mediaType, IReadOnlyList<VisionTurn> history, string question, CancellationToken cancellationToken)
     {
         var opt = options.Value;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -47,18 +51,7 @@ public sealed class HuggingFaceVisionService(
         request.Content = JsonContent.Create(new
         {
             model = opt.VisionModel,
-            messages = new[]
-            {
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = question },
-                        new { type = "image_url", image_url = new { url = dataUri } },
-                    },
-                },
-            },
+            messages = BuildMessages(history, question, dataUri),
         });
 
         try
@@ -75,6 +68,36 @@ public sealed class HuggingFaceVisionService(
         {
             return messages.Timeout;
         }
+    }
+
+    /// <summary>
+    /// Build the OpenAI-compatible messages array for a (possibly multi-turn) vision conversation. The image
+    /// is attached to the first user turn only; the current <paramref name="question"/> is appended last as a
+    /// text-only user turn. When <paramref name="history"/> is empty the image rides with the current question
+    /// (the standard single-turn shape).
+    /// </summary>
+    private static List<object> BuildMessages(IReadOnlyList<VisionTurn> history, string question, string dataUri)
+    {
+        object TextPart(string text) => new { type = "text", text };
+        object ImagePart() => new { type = "image_url", image_url = new { url = dataUri } };
+
+        var messages = new List<object>();
+        if (history.Count == 0)
+        {
+            messages.Add(new { role = "user", content = new[] { TextPart(question), ImagePart() } });
+            return messages;
+        }
+
+        for (var i = 0; i < history.Count; i++)
+        {
+            var content = i == 0
+                ? new[] { TextPart(history[i].Question), ImagePart() } // image on the first user turn only
+                : [TextPart(history[i].Question)];
+            messages.Add(new { role = "user", content });
+            messages.Add(new { role = "assistant", content = history[i].Answer });
+        }
+        messages.Add(new { role = "user", content = new[] { TextPart(question) } });
+        return messages;
     }
 
     private static string? ExtractContent(JsonElement root) =>

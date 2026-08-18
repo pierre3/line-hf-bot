@@ -102,7 +102,8 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
 | `App__VideoEnabled` | `false` | 動画を有効化: `/video`（text-to-video）**と** 🎬 動画にする（image-to-video）。どちらも fal-ai で**クレジット消費が激しく遅い**ため既定オフ。`true` で許可。 |
-| `App__VisionEnabled` | `true` | 送信写真への画像 Q&A。オン: 写真受信時に ✏️ 編集 / 💬 この画像について質問 を提示。オフ: 写真は即・編集フロー（vision UI なし）。 |
+| `App__VisionEnabled` | `true` | 送信写真・生成画像への画像 Q&A。オン: 写真受信時に ✏️ 編集 / 💬 この画像について質問 を提示し、画像結果に 💬 質問 ボタンを追加。オフ: 写真は即・編集フロー（vision UI なし）。 |
+| `App__VisionMaxTurns` | `8` | 会話型 vision セッションで保持する Q&A ターン数の上限（最小 1）。追い質問のたびに画像＋履歴を再送するのでクレジット消費がターン数に比例＝これで上限を設ける。 |
 | `App__Locale` | `en` | ユーザー向け文言とリッチメニューの言語（`en` / `ja`）。 |
 | `App__RichMenuEnabled` | `true` | 起動時にモード切替リッチメニューを作成（冪等）。`false` で無し。 |
 | `App__MediaTtlMinutes` | `10` | 生成メディアをメモリに保持し `/media/{id}` で配信する時間。 |
