@@ -1,6 +1,6 @@
 # 仕様: vision フォローアップ / 会話型 vision（生成画像への質問＋マルチターン）
 
-- 状態: ドラフト（仕様ゲート待ち）
+- 状態: 実装済み（仕様ゲート PASS 相当 → 実装・テスト 2026-08-18）
 - 対象: (Part 1) 生成/編集画像にも「💬 質問」を出す。(Part 2b) vision を**会話型**にし、同じ画像への追い質問を文脈込みで継続できるようにする。
 - 関連: `docs/specs/07-image-vision-vqa.md`（送信写真へのワンショット質問＝基盤／`PendingAction.VisionQuestion`／`WorkKind.Vision`／`Ai/VisionService.cs`）、`docs/specs/08-image-to-video.md`（`QuickReplyFactory` の gate 注入・作業中画像モデル）、`docs/specs/03-mode-context-richmenu.md`（モード状態・postback）
 - 背景: spec07 で送信写真への**ワンショット**質問（VQA）が入った。質問経路（`action=ask`→`PendingAction.VisionQuestion`→`WorkKind.Vision`、`LastImageId` の画像に対して回答）は既に完成しているが、(a) 「💬 質問」ボタンは**送信写真の選択 QuickReply にしか無く**、生成/編集画像には出ない。(b) 回答は QuickReply 無しで push され、1問で終わる（次の指示語「その車の色は?」は解決できない）。本 spec はこの 2 点を埋める。

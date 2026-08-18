@@ -16,9 +16,11 @@ namespace LineHfBot.Line;
 public sealed class QuickReplyFactory(UserMessages messages, IOptions<AppOptions> appOptions)
 {
     private bool VideoEnabled => appOptions.Value.VideoEnabled;
+    private bool VisionEnabled => appOptions.Value.VisionEnabled;
 
     /// <summary>Buttons under an image result: regenerate (same prompt), edit (image-to-image),
-    /// animate (image-to-video, when video is enabled), back to chat.</summary>
+    /// ask (vision Q&amp;A, when vision is enabled), animate (image-to-video, when video is enabled),
+    /// back to chat.</summary>
     public QuickReply ImageResult
     {
         get
@@ -26,6 +28,30 @@ public sealed class QuickReplyFactory(UserMessages messages, IOptions<AppOptions
             List<QuickReplyItem> items =
             [
                 Item(messages.LabelRegenerate, "action=regen"),
+                Item(messages.LabelEdit, "action=edit"),
+            ];
+            if (VisionEnabled)
+            {
+                items.Add(Item(messages.LabelAsk, "action=ask"));
+            }
+            if (VideoEnabled)
+            {
+                items.Add(Item(messages.LabelAnimate, "action=animate"));
+            }
+            items.Add(Item(messages.LabelBackToChat, "action=mode&value=chat"));
+            return new QuickReply { Items = items };
+        }
+    }
+
+    /// <summary>Buttons under a conversational vision answer (spec09): edit the image, animate it
+    /// (image-to-video, when video is enabled), or leave the session for chat. Follow-up questions
+    /// need no button — a plain message continues the session.</summary>
+    public QuickReply VisionAnswer
+    {
+        get
+        {
+            List<QuickReplyItem> items =
+            [
                 Item(messages.LabelEdit, "action=edit"),
             ];
             if (VideoEnabled)

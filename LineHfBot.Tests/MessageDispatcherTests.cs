@@ -167,6 +167,65 @@ public class MessageDispatcherTests
         Assert.Equal(PendingAction.None, state.Get("u1").Pending);
     }
 
+    // AC4: while a vision session is active, a plain message is a follow-up question against the session image,
+    // regardless of the current mode.
+    [Fact]
+    public async Task Active_vision_session_routes_plain_text_to_Vision()
+    {
+        var (dispatcher, queue, _, _, state) = Build();
+        state.SetMode("u1", ChatMode.Image); // even in image mode, the session wins
+        state.AppendVisionTurn("u1", "img-9", new VisionTurn("what is this?", "a car"), 8);
+
+        await dispatcher.DispatchAsync(TextEvent("what color is it?"), CancellationToken.None);
+
+        var item = Assert.Single(queue.Items);
+        Assert.Equal(WorkKind.Vision, item.Kind);
+        Assert.Equal("what color is it?", item.Text);
+        Assert.Equal("img-9", item.RefImageId);
+    }
+
+    // AC10: a slash command ends the vision session (and the follow-up no longer routes to Vision).
+    [Fact]
+    public async Task Slash_command_ends_vision_session()
+    {
+        var (dispatcher, queue, _, _, state) = Build();
+        state.AppendVisionTurn("u1", "img-9", new VisionTurn("q", "a"), 8);
+
+        await dispatcher.DispatchAsync(TextEvent("/help"), CancellationToken.None);
+
+        Assert.Equal(WorkKind.Help, Assert.Single(queue.Items).Kind);
+        Assert.False(state.Get("u1").VisionActive);
+    }
+
+    // AC10: switching mode ends the vision session; the next plain text follows the new mode, not the session.
+    [Fact]
+    public async Task Mode_switch_ends_vision_session()
+    {
+        var (dispatcher, queue, _, _, state) = Build();
+        state.AppendVisionTurn("u1", "img-9", new VisionTurn("q", "a"), 8);
+
+        await dispatcher.DispatchAsync(PostbackEvent("action=mode&value=image"), CancellationToken.None);
+        queue.Items.Clear();
+        await dispatcher.DispatchAsync(TextEvent("a red car"), CancellationToken.None);
+
+        Assert.False(state.Get("u1").VisionActive);
+        Assert.Equal(WorkKind.Image, Assert.Single(queue.Items).Kind);
+    }
+
+    // AC10: arming an edit ends the vision session.
+    [Fact]
+    public async Task Edit_postback_ends_vision_session()
+    {
+        var (dispatcher, _, _, _, state) = Build();
+        state.SetLastImage("u1", "a cat", "img-9"); // SetLastImage already clears, so re-open the session after
+        state.AppendVisionTurn("u1", "img-9", new VisionTurn("q", "a"), 8);
+
+        await dispatcher.DispatchAsync(PostbackEvent("action=edit"), CancellationToken.None);
+
+        Assert.Equal(PendingAction.Edit, state.Get("u1").Pending);
+        Assert.False(state.Get("u1").VisionActive);
+    }
+
     private static CallbackRequest PostbackEvent(string data) => new()
     {
         Events =

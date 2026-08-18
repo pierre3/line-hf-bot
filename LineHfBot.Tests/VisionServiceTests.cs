@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LineHfBot.Ai;
 using LineHfBot.Configuration;
+using LineHfBot.State;
 using LineHfBot.Text;
 using Microsoft.Extensions.Options;
 
@@ -34,7 +35,7 @@ public class VisionServiceTests
             "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"a cat\"}}]}"));
         var svc = Service(handler);
 
-        var answer = await svc.AnswerAsync(Image, "image/jpeg", "what is this?", CancellationToken.None);
+        var answer = await svc.AnswerAsync(Image, "image/jpeg", [], "what is this?", CancellationToken.None);
 
         Assert.Equal("a cat", answer);
 
@@ -61,7 +62,7 @@ public class VisionServiceTests
             "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}"));
         var svc = Service(handler);
 
-        await svc.AnswerAsync(Image, "", "q", CancellationToken.None);
+        await svc.AnswerAsync(Image, "", [], "q", CancellationToken.None);
 
         using var doc = JsonDocument.Parse(handler.Seen[0].Body!);
         var url = doc.RootElement.GetProperty("messages")[0].GetProperty("content")[1]
@@ -76,7 +77,7 @@ public class VisionServiceTests
             "{\"choices\":[{\"message\":{\"content\":\"\"}}]}"));
         var svc = Service(handler);
 
-        var answer = await svc.AnswerAsync(Image, "image/png", "q", CancellationToken.None);
+        var answer = await svc.AnswerAsync(Image, "image/png", [], "q", CancellationToken.None);
 
         Assert.Equal(Messages().EmptyAnswer, answer);
     }
@@ -87,7 +88,7 @@ public class VisionServiceTests
         var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Json("{}"));
         var svc = Service(handler);
 
-        var answer = await svc.AnswerAsync(Image, "image/png", "q", CancellationToken.None);
+        var answer = await svc.AnswerAsync(Image, "image/png", [], "q", CancellationToken.None);
 
         Assert.Equal(Messages().EmptyAnswer, answer);
     }
@@ -103,7 +104,64 @@ public class VisionServiceTests
         var svc = Service(handler);
 
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => svc.AnswerAsync(Image, "image/png", "q", CancellationToken.None));
+            () => svc.AnswerAsync(Image, "image/png", [], "q", CancellationToken.None));
+    }
+
+    // AC3: with history, the image rides on the first user turn only; later turns are text-only, and the
+    // current question is appended last as a text-only user turn.
+    [Fact]
+    public async Task Multiturn_attaches_image_to_first_user_turn_only()
+    {
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Json(
+            "{\"choices\":[{\"message\":{\"content\":\"blue\"}}]}"));
+        var svc = Service(handler);
+        IReadOnlyList<VisionTurn> history =
+        [
+            new("what is this?", "a car"),
+            new("what brand?", "a Toyota"),
+        ];
+
+        await svc.AnswerAsync(Image, "image/jpeg", history, "what color is it?", CancellationToken.None);
+
+        using var doc = JsonDocument.Parse(handler.Seen[0].Body!);
+        var messages = doc.RootElement.GetProperty("messages");
+        // user Q1(+image), assistant A1, user Q2, assistant A2, user Q3
+        Assert.Equal(5, messages.GetArrayLength());
+
+        // Turn 0: first question carries the image.
+        Assert.Equal("user", messages[0].GetProperty("role").GetString());
+        var t0 = messages[0].GetProperty("content");
+        Assert.Equal("what is this?", t0[0].GetProperty("text").GetString());
+        Assert.Equal("image_url", t0[1].GetProperty("type").GetString());
+
+        // Turn 1: assistant answer as a plain string.
+        Assert.Equal("assistant", messages[1].GetProperty("role").GetString());
+        Assert.Equal("a car", messages[1].GetProperty("content").GetString());
+
+        // Turn 2: second question is text-only (no image part).
+        var t2 = messages[2].GetProperty("content");
+        Assert.Equal(1, t2.GetArrayLength());
+        Assert.Equal("what brand?", t2[0].GetProperty("text").GetString());
+
+        // Last turn: the current question, text-only.
+        var last = messages[4].GetProperty("content");
+        Assert.Equal("user", messages[4].GetProperty("role").GetString());
+        Assert.Equal(1, last.GetArrayLength());
+        Assert.Equal("what color is it?", last[0].GetProperty("text").GetString());
+
+        // No message other than the first user turn carries an image.
+        for (var i = 1; i < messages.GetArrayLength(); i++)
+        {
+            var c = messages[i].GetProperty("content");
+            if (c.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+            foreach (var part in c.EnumerateArray())
+            {
+                Assert.NotEqual("image_url", part.GetProperty("type").GetString());
+            }
+        }
     }
 
     [Fact]
@@ -114,5 +172,6 @@ public class VisionServiceTests
         Assert.Equal("https://router.huggingface.co/v1/chat/completions", o.VisionEndpoint);
         Assert.Equal(120, o.VisionTimeoutSeconds);
         Assert.True(new AppOptions().VisionEnabled);
+        Assert.Equal(8, new AppOptions().VisionMaxTurns);
     }
 }

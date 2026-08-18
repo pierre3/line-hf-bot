@@ -105,7 +105,8 @@ Everything else has a sensible default and is optional. Add only what you want t
 | Variable | Default | Description |
 | --- | --- | --- |
 | `App__VideoEnabled` | `false` | Enable video: the `/video` command (text-to-video) **and** 🎬 Make a video (image-to-video). Both run on the **credit-heavy, slow** fal-ai provider; set `true` to allow them. |
-| `App__VisionEnabled` | `true` | Vision Q&A on sent photos. On: a sent photo offers ✏️ Edit / 💬 Ask about this image. Off: a sent photo goes straight to editing (no vision UI). |
+| `App__VisionEnabled` | `true` | Vision Q&A on sent photos and generated images. On: a sent photo offers ✏️ Edit / 💬 Ask about this image, and image results add a 💬 Ask button. Off: a sent photo goes straight to editing (no vision UI). |
+| `App__VisionMaxTurns` | `8` | Max Q&A turns kept in a conversational vision session (min 1). Each follow-up resends the image + prior turns, so credit cost grows with turns — this caps it. |
 | `App__Locale` | `en` | Language of user-facing text and the rich menu (`en` or `ja`). |
 | `App__RichMenuEnabled` | `true` | Provision the mode-switcher rich menu on startup (idempotent). `false` runs without it. |
 | `App__MediaTtlMinutes` | `10` | How long generated media is kept in memory and served at `/media/{id}`. |

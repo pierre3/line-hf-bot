@@ -50,6 +50,7 @@ public sealed class UserMessages
     public string VisionPrompt => _s.VisionPrompt;
     public string VisionThinking => _s.VisionThinking;
     public string VisionImageExpired => _s.VisionImageExpired;
+    public string VisionFollowupHint => _s.VisionFollowupHint;
 
     // Image-to-video on a working image (spec 08)
     public string AnimatePrompt => _s.AnimatePrompt;
@@ -92,6 +93,7 @@ public sealed class UserMessages
         string VisionPrompt,
         string VisionThinking,
         string VisionImageExpired,
+        string VisionFollowupHint,
         string AnimatePrompt,
         string LabelRegenerate,
         string LabelEdit,
@@ -106,7 +108,8 @@ public sealed class UserMessages
             "・Send a message to chat with the AI\n" +
             "・Use the menu at the bottom to switch mode (Chat / Image / Video)\n" +
             "・In Image mode, send a description to generate an image\n" +
-            "・After an image, tap 🔄 to regenerate, ✏️ to edit, or 🎬 to make a video\n" +
+            "・After an image, tap 🔄 to regenerate, ✏️ to edit, 💬 to ask about it, or 🎬 to make a video\n" +
+            "・After asking about an image, keep asking follow-up questions — just type them\n" +
             "・Send a photo to edit it, ask about it, or turn it into a video\n" +
             "・/image <text> … make an image\n" +
             "・/video <text> … make a video\n" +
@@ -138,6 +141,7 @@ public sealed class UserMessages
         VisionPrompt: "What would you like to ask about this image? e.g. What is written here?",
         VisionThinking: "Looking at your image… 🔍",
         VisionImageExpired: "That image is no longer available. Please send the photo again.",
+        VisionFollowupHint: "You can keep asking about this image. Tap 💬 Chat when you're done.",
         AnimatePrompt: "How should it move? Send a short description. e.g. slowly zoom in",
         LabelRegenerate: "🔄 Regenerate",
         LabelEdit: "✏️ Edit",
@@ -152,7 +156,8 @@ public sealed class UserMessages
             "・そのままメッセージを送ると AI とチャットできます\n" +
             "・下のメニューでモード（チャット / 画像 / 動画）を切り替えられます\n" +
             "・画像モードでは、説明を送ると画像を作ります\n" +
-            "・画像のあとは 🔄 で作り直し、✏️ で編集、🎬 で動画にできます\n" +
+            "・画像のあとは 🔄 で作り直し、✏️ で編集、💬 で内容の質問、🎬 で動画にできます\n" +
+            "・画像について質問したあとは、続けて質問できます（そのまま入力してください）\n" +
             "・写真を送ると、編集・内容の質問・動画化ができます\n" +
             "・/image 説明 … 画像を作ります\n" +
             "・/video 説明 … 動画を作ります\n" +
@@ -184,6 +189,7 @@ public sealed class UserMessages
         VisionPrompt: "この画像について何を聞きますか？例: ここに何が書いてある？",
         VisionThinking: "画像を確認しています… 🔍",
         VisionImageExpired: "その画像はもう使えません。もう一度写真を送ってください。",
+        VisionFollowupHint: "この画像について続けて質問できます。終わるときは 💬 チャットへ。",
         AnimatePrompt: "どんな動きにしますか？ 短い説明を送ってください。例: ゆっくりズームイン",
         LabelRegenerate: "🔄 再生成",
         LabelEdit: "✏️ 編集",

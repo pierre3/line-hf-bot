@@ -182,10 +182,13 @@ public sealed class WorkProcessor(
     }
 
     /// <summary>
-    /// Answer a question about the user's working image (vision/VQA). The reference image lives in the TTL
-    /// media cache and may have expired. Vision can be slow, so we ack via the (free) reply token and push
-    /// the answer. The service returns a display-ready string (answer / timeout / empty), so we push it as-is;
-    /// only non-2xx throws and is surfaced as the generic error by the top-level handler. No PublicBaseUrl needed.
+    /// Answer a question about the user's working image (vision/VQA), continuing a conversational session when
+    /// one is open for this image (spec09). The reference image lives in the TTL media cache and may have expired
+    /// (expiry ends the session). Vision can be slow, so we ack via the (free) reply token and push the answer.
+    /// The service returns a display-ready string (answer / timeout / empty). A successful turn is appended to the
+    /// session (bounded by <see cref="AppOptions.VisionMaxTurns"/>) and, on the first successful turn, the answer
+    /// carries a follow-up hint; a timeout/empty turn is not accumulated and does not open a session. Only non-2xx
+    /// throws and is surfaced as the generic error by the top-level handler. No PublicBaseUrl needed.
     /// </summary>
     private async Task HandleVisionAsync(WorkItem item, CancellationToken cancellationToken)
     {
@@ -199,9 +202,14 @@ public sealed class WorkProcessor(
         if (string.IsNullOrEmpty(item.RefImageId) ||
             !mediaStore.TryGet(item.RefImageId, out var reference) || reference is null)
         {
+            // The image (and thus the session) is gone; end the session so plain text stops following up.
+            userState.ClearVisionSession(item.UserId);
             await SendAsync(item, messages.VisionImageExpired, cancellationToken);
             return;
         }
+
+        var history = userState.GetVisionHistory(item.UserId, item.RefImageId);
+        var firstTurn = history.Count == 0;
 
         // Immediate ack via the (free) reply token; the answer is pushed when ready.
         if (!string.IsNullOrEmpty(item.ReplyToken))
@@ -209,8 +217,21 @@ public sealed class WorkProcessor(
             await messenger.TryReplyTextAsync(item.ReplyToken, messages.VisionThinking, cancellationToken);
         }
 
-        var answer = await visionService.AnswerAsync(reference.Bytes, reference.ContentType, item.Text, cancellationToken);
-        await messenger.PushTextAsync(item.UserId, answer, cancellationToken);
+        var answer = await visionService.AnswerAsync(reference.Bytes, reference.ContentType, history, item.Text, cancellationToken);
+
+        // A timeout/empty answer is a non-answer (same display strings as the service contract): do not add it to
+        // the context and do not open a session (a first failed turn falls back to spec07 one-shot behavior).
+        var succeeded = !string.Equals(answer, messages.Timeout, StringComparison.Ordinal) &&
+                        !string.Equals(answer, messages.EmptyAnswer, StringComparison.Ordinal);
+        if (succeeded)
+        {
+            userState.AppendVisionTurn(item.UserId, item.RefImageId, new VisionTurn(item.Text, answer), appOptions.Value.VisionMaxTurns);
+        }
+
+        // Hint only on the first successful turn (the session just opened); the VisionAnswer quick reply
+        // (edit / animate / chat) is always offered so the exit path is available on every answer.
+        var text = succeeded && firstTurn ? $"{answer}\n{messages.VisionFollowupHint}" : answer;
+        await messenger.PushTextAsync(item.UserId, text, cancellationToken, quickReplies.VisionAnswer);
     }
 
     private async Task HandleVideoAsync(WorkItem item, CancellationToken cancellationToken)
