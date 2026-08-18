@@ -45,7 +45,7 @@ Full walkthrough (tunnel, `.env` parameter reference, LINE setup, troubleshootin
 - 💬 **Chat** with conversation history
 - 🎨 **Image generation** — `/image <prompt>` or switch to Image mode
 - 🖼️ **Image editing** — edit a generated image or a photo you send (image-to-image, via fal-ai)
-- 🔍 **Ask about an image** — send a photo and ask a one-shot question (vision/VQA); on by default, same HF credits as chat
+- 🔍 **Ask about an image** — ask about a photo you send or an image the bot made (vision/VQA), and keep asking follow-up questions in context; on by default, same HF credits as chat
 - 🎬 **Video** — `/video <prompt>` (text-to-video) and **🎬 Make a video** from an image (image-to-video), both via fal-ai; off by default
 - 🎛️ A **rich menu** switches modes; **English / Japanese** UI (`App__Locale`)
 
@@ -54,6 +54,17 @@ Full walkthrough (tunnel, `.env` parameter reference, LINE setup, troubleshootin
 Everything is set through environment variables (`Section__Key`, double underscore). The four above are the
 minimum; models, providers, timeouts, and behavior all have sensible defaults. Full reference:
 **https://github.com/pierre3/line-hf-bot/blob/main/docs/deploy/docker-hub.md#parameter-reference**
+
+## Release history
+
+- **1.2.0** — Conversational vision follow-up: keep asking about the same image in context, plus a 💬 Ask
+  button on generated/edited image results (`App__VisionMaxTurns`).
+- **1.1.1** — Videos now play inline in LINE (HTTP range support on `/media`).
+- **1.1.0** — Image Q&A (vision/VQA) on sent photos, and 🎬 image-to-video ("Make a video" from an image).
+- **1.0.1** — Chiseled runtime image (fewer CVEs); Docker Hub Overview.
+- **1.0.0** — First public release: chat, image generation & editing, text-to-video, rich menu, EN/JA UI.
+
+Full changelog: **https://github.com/pierre3/line-hf-bot/blob/main/CHANGELOG.md**
 
 ## Important: state is in memory
 

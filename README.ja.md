@@ -152,8 +152,9 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 - Hugging Face Inference Providers（画像・動画・vision）
 
 ## ドキュメント
+- 変更履歴: [`CHANGELOG.md`](CHANGELOG.md)
 - デプロイ手順: [`docs/deploy/`](docs/deploy/) — [Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)、[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)、[ソースから動かす](docs/deploy/from-source.ja.md)
-- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)、07 画像 Q&A(vision/VQA)、08 画像→動画(image-to-video)
+- 仕様: [`docs/specs/`](docs/specs/) — 01 基本、02 画像プロバイダ、03 モード / リッチメニュー / i18n、04 ユーザー写真の編集、05 画像編集(fal-ai)、06 動画(fal-ai)、07 画像 Q&A(vision/VQA)、08 画像→動画(image-to-video)、09 vision フォローアップ / マルチターン
 - レビュー記録（仕様 / 実装 / セキュリティ / ドキュメントの各ゲート）: [`docs/reviews/`](docs/reviews/)
 - 開発ガイド: [`CLAUDE.md`](CLAUDE.md)
 
