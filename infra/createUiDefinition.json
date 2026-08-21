@@ -93,6 +93,29 @@
               "hideConfirmation": true
             },
             "visible": true
+          },
+          {
+            "name": "chatModelInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "The chat model must be served by a provider you have enabled, and provider catalogs change over time. If chat later fails, list current models: GET https://router.huggingface.co/v1/models",
+              "uri": "https://huggingface.co/settings/inference-providers"
+            }
+          },
+          {
+            "name": "chatModel",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Chat model",
+            "defaultValue": "Qwen/Qwen2.5-72B-Instruct",
+            "toolTip": "Hugging Face chat model id. Pin a provider as model:provider if needed. Lighter options: meta-llama/Llama-3.1-8B-Instruct, Qwen/Qwen3-4B-Instruct-2507.",
+            "constraints": {
+              "required": true,
+              "regex": "^[^\\s]+$",
+              "validationMessage": "Enter a model id with no spaces, e.g. Qwen/Qwen2.5-72B-Instruct or model:provider."
+            },
+            "visible": true
           }
         ]
       },
@@ -213,6 +236,7 @@
       "lineChannelSecret": "[steps('line').lineChannelSecret]",
       "lineChannelAccessToken": "[steps('line').lineChannelAccessToken]",
       "huggingFaceApiKey": "[steps('huggingface').huggingFaceApiKey]",
+      "chatModel": "[steps('huggingface').chatModel]",
       "locale": "[steps('options').locale]",
       "visionEnabled": "[steps('options').visionEnabled]",
       "videoEnabled": "[steps('options').videoEnabled]",

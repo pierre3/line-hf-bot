@@ -49,6 +49,9 @@ param videoEnabled bool = false
 @description('Enable vision Q&A on sent photos and generated images. Uses chat-level HF credits (not fal).')
 param visionEnabled bool = true
 
+@description('Hugging Face chat model. Must be served by a provider your token has enabled; provider catalogs change over time, so a model that worked before can stop being served. List what is available now with GET https://router.huggingface.co/v1/models. Pin a provider as model:provider if needed. Setting it here overrides the image default so a stale baked-in default cannot break chat.')
+param chatModel string = 'Qwen/Qwen2.5-72B-Instruct'
+
 // --- Compute sizing ---
 
 // ACA Consumption only accepts fixed CPU/memory pairs. These two params must be set to a
@@ -162,6 +165,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'HuggingFace__ApiKey'
               secretRef: 'huggingface-api-key'
+            }
+            {
+              name: 'HuggingFace__ChatModel'
+              value: chatModel
             }
             {
               name: 'App__PublicBaseUrl'
