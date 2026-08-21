@@ -173,36 +173,21 @@
             }
           },
           {
-            "name": "cpu",
+            "name": "size",
             "type": "Microsoft.Common.DropDown",
-            "label": "vCPU",
-            "defaultValue": "0.5",
-            "toolTip": "vCPU cores for the single replica.",
+            "label": "Container size (vCPU / memory)",
+            "defaultValue": "0.5 vCPU / 1.0 GiB",
+            "toolTip": "ACA Consumption allows only fixed vCPU/memory pairs, so pick a combined size. The default is enough for personal use.",
             "constraints": {
               "allowedValues": [
-                { "label": "0.25", "value": "0.25" },
-                { "label": "0.5", "value": "0.5" },
-                { "label": "0.75", "value": "0.75" },
-                { "label": "1.0", "value": "1.0" },
-                { "label": "2.0", "value": "2.0" }
-              ],
-              "required": true
-            },
-            "visible": true
-          },
-          {
-            "name": "memory",
-            "type": "Microsoft.Common.DropDown",
-            "label": "Memory",
-            "defaultValue": "1.0Gi",
-            "toolTip": "Memory for the single replica. Must pair with the vCPU value per ACA's allowed combinations (roughly 2 GiB per vCPU).",
-            "constraints": {
-              "allowedValues": [
-                { "label": "0.5 GiB", "value": "0.5Gi" },
-                { "label": "1.0 GiB", "value": "1.0Gi" },
-                { "label": "1.5 GiB", "value": "1.5Gi" },
-                { "label": "2.0 GiB", "value": "2.0Gi" },
-                { "label": "4.0 GiB", "value": "4.0Gi" }
+                { "label": "0.25 vCPU / 0.5 GiB", "value": { "cpu": "0.25", "memory": "0.5Gi" } },
+                { "label": "0.5 vCPU / 1.0 GiB", "value": { "cpu": "0.5", "memory": "1.0Gi" } },
+                { "label": "0.75 vCPU / 1.5 GiB", "value": { "cpu": "0.75", "memory": "1.5Gi" } },
+                { "label": "1.0 vCPU / 2.0 GiB", "value": { "cpu": "1.0", "memory": "2.0Gi" } },
+                { "label": "1.25 vCPU / 2.5 GiB", "value": { "cpu": "1.25", "memory": "2.5Gi" } },
+                { "label": "1.5 vCPU / 3.0 GiB", "value": { "cpu": "1.5", "memory": "3.0Gi" } },
+                { "label": "1.75 vCPU / 3.5 GiB", "value": { "cpu": "1.75", "memory": "3.5Gi" } },
+                { "label": "2.0 vCPU / 4.0 GiB", "value": { "cpu": "2.0", "memory": "4.0Gi" } }
               ],
               "required": true
             },
@@ -231,8 +216,8 @@
       "locale": "[steps('options').locale]",
       "visionEnabled": "[steps('options').visionEnabled]",
       "videoEnabled": "[steps('options').videoEnabled]",
-      "cpu": "[steps('options').cpu]",
-      "memory": "[steps('options').memory]",
+      "cpu": "[steps('options').size.cpu]",
+      "memory": "[steps('options').size.memory]",
       "image": "[steps('options').image]"
     }
   }

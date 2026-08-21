@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "6369453059032757587"
+      "templateHash": "16909401424591124143"
     }
   },
   "parameters": {
@@ -83,10 +83,13 @@
         "0.5",
         "0.75",
         "1.0",
+        "1.25",
+        "1.5",
+        "1.75",
         "2.0"
       ],
       "metadata": {
-        "description": "vCPU cores for the single replica."
+        "description": "vCPU cores for the single replica. Must pair with memory per ACA allowed combinations."
       }
     },
     "memory": {
@@ -97,6 +100,9 @@
         "1.0Gi",
         "1.5Gi",
         "2.0Gi",
+        "2.5Gi",
+        "3.0Gi",
+        "3.5Gi",
         "4.0Gi"
       ],
       "metadata": {

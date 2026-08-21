@@ -51,12 +51,18 @@ param visionEnabled bool = true
 
 // --- Compute sizing ---
 
-@description('vCPU cores for the single replica.')
+// ACA Consumption only accepts fixed CPU/memory pairs. These two params must be set to a
+// matching pair (0.25/0.5Gi, 0.5/1.0Gi, 0.75/1.5Gi, 1.0/2.0Gi, 1.25/2.5Gi, 1.5/3.0Gi,
+// 1.75/3.5Gi, 2.0/4.0Gi) — the portal form enforces this with a single combined selector.
+@description('vCPU cores for the single replica. Must pair with memory per ACA allowed combinations.')
 @allowed([
   '0.25'
   '0.5'
   '0.75'
   '1.0'
+  '1.25'
+  '1.5'
+  '1.75'
   '2.0'
 ])
 param cpu string = '0.5'
@@ -67,6 +73,9 @@ param cpu string = '0.5'
   '1.0Gi'
   '1.5Gi'
   '2.0Gi'
+  '2.5Gi'
+  '3.0Gi'
+  '3.5Gi'
   '4.0Gi'
 ])
 param memory string = '1.0Gi'
