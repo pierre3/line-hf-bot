@@ -105,7 +105,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 
   [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2FcreateUiDefinition.json)
 
-  ブラウザで 3 つの認証情報を入力するだけ。デプロイ完了時に Webhook URL が表示されるので、それを LINE に登録します。メモリ内前提の設計のため**常時起動**のシングルインスタンスで動き、わずかながら費用が発生し続けます。
+  ブラウザで 3 つの認証情報を入力します。デプロイ後、Webhook URL は**デプロイの「出力（Outputs）」タブ**（リソースグループ →「デプロイ」→ 該当デプロイ → 出力、`lineWebhookUrl`）で確認できます（完了画面には出ません）。Container App の Application Url に `/webhook` を付けて組み立てても OK。これを LINE に登録します。シングルインスタンス（最大は常に 1）で動き、既定の Minimum replicas = 1 では常時起動＝わずかに費用が発生します（試用なら 0 でゼロスケール可）。
 - **[ソースから動かす](docs/deploy/from-source.ja.md)** — クローンから Docker Compose または `dotnet run` でビルドして起動（開発・カスタマイズ向け）。
 
 ## コマンド

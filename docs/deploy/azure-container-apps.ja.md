@@ -16,7 +16,7 @@ Docker Hub に公開したイメージを **Azure Container Apps (ACA)** で動�
 
 - **入力するもの:** LINE のチャネルシークレット、チャネルアクセストークン、Hugging Face トークン。任意で言語（`en`/`ja`）、vision/動画のオン・オフ、CPU/メモリも選べます。
 - **作られるもの**（選んだリソースグループ内）: Log Analytics ワークスペース、Container Apps マネージド環境、Container App 本体。**最大レプリカ数は常に 1**（メモリ内状態はレプリカ間で分割できないため）。**最小レプリカ数は既定 1（常時起動・推奨）**。試用なら **0**（アイドル時にゼロスケール）も選べます — 安いが、アイドルのたびにメモリ内状態（履歴・生成メディア）が消え、次のメッセージでコールドスタートします。`App__PublicBaseUrl` はアプリ自身の HTTPS URL に自動設定されるので、FQDN の二段階設定は不要です。
-- **完了後:** デプロイの**出力（Outputs）**を開くと `lineWebhookUrl` が LINE に登録すべき URL です。下記[LINE の Webhook を向ける](#5-line-の-webhook-を向ける)の手順で登録し、`curl https://<fqdn>/health` → `{"status":"ok"}` で確認します。
+- **完了後:** Webhook URL は**デプロイの「出力（Outputs）」タブ**（リソースグループ →「デプロイ」→ 該当デプロイ → 出力、`lineWebhookUrl`）に表示されます。**完了画面には出ません。** Container App の **Application Url** に `/webhook` を付けて組み立てても OK。これを LINE に登録し（下記[LINE の Webhook を向ける](#5-line-の-webhook-を向ける)）、`curl https://<fqdn>/health` → `{"status":"ok"}` で確認します。
 
 > **コスト:** 最小レプリカ数 1 だと 24 時間稼働（ゼロスケールしない）なので、小額でも常時課金が発生します。0 にすればアイドル課金は避けられますが、コールドスタートと状態消失が代償です。不要になったらリソースグループを削除してください（ポータル、または `az group delete --name <rg>`）。
 

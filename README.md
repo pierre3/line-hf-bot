@@ -105,7 +105,7 @@ reference, and troubleshooting: **[Run from Docker Hub](docs/deploy/docker-hub.m
 
   [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2FcreateUiDefinition.json)
 
-  Fill in your three credentials in the browser; the app's webhook URL is shown when the deploy finishes — paste it into LINE. It runs as a single **always-on** replica (required by the in-memory design), so expect a small ongoing cost.
+  Fill in your three credentials in the browser. After it deploys, get the webhook URL from the deployment's **Outputs** tab (Resource group → Deployments → your deployment → Outputs, shown as `lineWebhookUrl`) — it isn't shown on the completion screen; you can also build it from the Container App's Application Url + `/webhook`. Register it in LINE. It runs as a single replica (max is always 1); with the default Minimum replicas = 1 it's always-on, so expect a small ongoing cost (pick 0 to scale to zero for trial use).
 - **[Run from source](docs/deploy/from-source.md)** — build from a clone with Docker Compose or `dotnet run`, for development or customization.
 
 ## Commands
