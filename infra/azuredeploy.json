@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "4330849954770498666"
+      "templateHash": "8767192342933773026"
     }
   },
   "parameters": {
@@ -114,6 +114,17 @@
       ],
       "metadata": {
         "description": "Memory for the single replica. Must pair with the CPU value per ACA allowed combinations."
+      }
+    },
+    "minReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [
+        0,
+        1
+      ],
+      "metadata": {
+        "description": "Minimum replicas. 1 = always-on (recommended: keeps in-memory state and avoids cold-start delays). 0 = scale to zero when idle (cheaper for trial use, but each idle period loses all in-memory state — history and generated media — and the next request cold-starts, which can be slow enough to drop the first webhook). Maximum is always 1: the in-memory design cannot run more than one replica."
       }
     }
   },
@@ -225,7 +236,7 @@
             }
           ],
           "scale": {
-            "minReplicas": 1,
+            "minReplicas": "[parameters('minReplicas')]",
             "maxReplicas": 1
           }
         }

@@ -192,8 +192,23 @@
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "The app runs as a single always-on replica (required by its in-memory state), so it is billed 24/7. The defaults (0.5 vCPU / 1.0 GiB) are enough for personal use."
+              "text": "The app runs as a single replica (max is always 1 — its in-memory state can't be split). Keep Minimum replicas = 1 for always-on (billed 24/7, recommended). The defaults (0.5 vCPU / 1.0 GiB) are enough for personal use."
             }
+          },
+          {
+            "name": "minReplicas",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Minimum replicas",
+            "defaultValue": "1 — always-on (recommended)",
+            "toolTip": "1 keeps the app always running (recommended). 0 scales to zero when idle (cheaper for trial use), but each idle period loses all in-memory state (history, generated media) and the next message cold-starts, which can be slow enough to drop the first webhook.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "1 — always-on (recommended)", "value": 1 },
+                { "label": "0 — scale to zero when idle (cheaper, cold starts, loses state)", "value": 0 }
+              ],
+              "required": true
+            },
+            "visible": true
           },
           {
             "name": "size",
@@ -240,6 +255,7 @@
       "locale": "[steps('options').locale]",
       "visionEnabled": "[steps('options').visionEnabled]",
       "videoEnabled": "[steps('options').videoEnabled]",
+      "minReplicas": "[steps('options').minReplicas]",
       "cpu": "[steps('options').size.cpu]",
       "memory": "[steps('options').size.memory]",
       "image": "[steps('options').image]"
