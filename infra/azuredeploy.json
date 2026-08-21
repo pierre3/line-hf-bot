@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "16909401424591124143"
+      "templateHash": "4330849954770498666"
     }
   },
   "parameters": {
@@ -73,6 +73,13 @@
       "defaultValue": true,
       "metadata": {
         "description": "Enable vision Q&A on sent photos and generated images. Uses chat-level HF credits (not fal)."
+      }
+    },
+    "chatModel": {
+      "type": "string",
+      "defaultValue": "Qwen/Qwen2.5-72B-Instruct",
+      "metadata": {
+        "description": "Hugging Face chat model. Must be served by a provider your token has enabled; provider catalogs change over time, so a model that worked before can stop being served. List what is available now with GET https://router.huggingface.co/v1/models. Pin a provider as model:provider if needed. Setting it here overrides the image default so a stale baked-in default cannot break chat."
       }
     },
     "cpu": {
@@ -193,6 +200,10 @@
                 {
                   "name": "HuggingFace__ApiKey",
                   "secretRef": "huggingface-api-key"
+                },
+                {
+                  "name": "HuggingFace__ChatModel",
+                  "value": "[parameters('chatModel')]"
                 },
                 {
                   "name": "App__PublicBaseUrl",
