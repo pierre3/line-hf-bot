@@ -49,6 +49,9 @@ param videoEnabled bool = false
 @description('Enable vision Q&A on sent photos and generated images. Uses chat-level HF credits (not fal).')
 param visionEnabled bool = true
 
+@description('Hugging Face chat model. Must be served by a provider your token has enabled; provider catalogs change over time, so a model that worked before can stop being served. List what is available now with GET https://router.huggingface.co/v1/models. Pin a provider as model:provider if needed. Setting it here overrides the image default so a stale baked-in default cannot break chat.')
+param chatModel string = 'Qwen/Qwen2.5-72B-Instruct'
+
 // --- Compute sizing ---
 
 // ACA Consumption only accepts fixed CPU/memory pairs. These two params must be set to a
@@ -79,6 +82,13 @@ param cpu string = '0.5'
   '4.0Gi'
 ])
 param memory string = '1.0Gi'
+
+@description('Minimum replicas. 1 = always-on (recommended: keeps in-memory state and avoids cold-start delays). 0 = scale to zero when idle (cheaper for trial use, but each idle period loses all in-memory state — history and generated media — and the next request cold-starts, which can be slow enough to drop the first webhook). Maximum is always 1: the in-memory design cannot run more than one replica.')
+@allowed([
+  0
+  1
+])
+param minReplicas int = 1
 
 // The app always listens on 8080 (base image sets ASPNETCORE_HTTP_PORTS=8080).
 var targetPort = 8080
@@ -164,6 +174,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               secretRef: 'huggingface-api-key'
             }
             {
+              name: 'HuggingFace__ChatModel'
+              value: chatModel
+            }
+            {
               name: 'App__PublicBaseUrl'
               value: publicBaseUrl
             }
@@ -182,9 +196,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           ]
         }
       ]
-      // Single always-on replica — required by the in-memory architecture.
+      // maxReplicas is always 1 — the in-memory architecture cannot be split across replicas.
+      // minReplicas is 1 (always-on) or 0 (scale to zero when idle; opt-in for trial use).
       scale: {
-        minReplicas: 1
+        minReplicas: minReplicas
         maxReplicas: 1
       }
     }

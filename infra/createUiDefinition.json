@@ -93,6 +93,29 @@
               "hideConfirmation": true
             },
             "visible": true
+          },
+          {
+            "name": "chatModelInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "The chat model must be served by a provider you have enabled, and provider catalogs change over time. If chat later fails, list current models: GET https://router.huggingface.co/v1/models",
+              "uri": "https://huggingface.co/settings/inference-providers"
+            }
+          },
+          {
+            "name": "chatModel",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Chat model",
+            "defaultValue": "Qwen/Qwen2.5-72B-Instruct",
+            "toolTip": "Hugging Face chat model id. Pin a provider as model:provider if needed. Lighter options: meta-llama/Llama-3.1-8B-Instruct, Qwen/Qwen3-4B-Instruct-2507.",
+            "constraints": {
+              "required": true,
+              "regex": "^[^\\s]+$",
+              "validationMessage": "Enter a model id with no spaces, e.g. Qwen/Qwen2.5-72B-Instruct or model:provider."
+            },
+            "visible": true
           }
         ]
       },
@@ -169,8 +192,23 @@
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "The app runs as a single always-on replica (required by its in-memory state), so it is billed 24/7. The defaults (0.5 vCPU / 1.0 GiB) are enough for personal use."
+              "text": "The app runs as a single replica (max is always 1 — its in-memory state can't be split). Keep Minimum replicas = 1 for always-on (billed 24/7, recommended). The defaults (0.5 vCPU / 1.0 GiB) are enough for personal use."
             }
+          },
+          {
+            "name": "minReplicas",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Minimum replicas",
+            "defaultValue": "1 — always-on (recommended)",
+            "toolTip": "1 keeps the app always running (recommended). 0 scales to zero when idle (cheaper for trial use), but each idle period loses all in-memory state (history, generated media) and the next message cold-starts, which can be slow enough to drop the first webhook.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "1 — always-on (recommended)", "value": 1 },
+                { "label": "0 — scale to zero when idle (cheaper, cold starts, loses state)", "value": 0 }
+              ],
+              "required": true
+            },
+            "visible": true
           },
           {
             "name": "size",
@@ -213,9 +251,11 @@
       "lineChannelSecret": "[steps('line').lineChannelSecret]",
       "lineChannelAccessToken": "[steps('line').lineChannelAccessToken]",
       "huggingFaceApiKey": "[steps('huggingface').huggingFaceApiKey]",
+      "chatModel": "[steps('huggingface').chatModel]",
       "locale": "[steps('options').locale]",
       "visionEnabled": "[steps('options').visionEnabled]",
       "videoEnabled": "[steps('options').videoEnabled]",
+      "minReplicas": "[steps('options').minReplicas]",
       "cpu": "[steps('options').size.cpu]",
       "memory": "[steps('options').size.memory]",
       "image": "[steps('options').image]"

@@ -15,10 +15,10 @@ Docker Hub に公開したイメージを **Azure Container Apps (ACA)** で動�
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2FcreateUiDefinition.json)
 
 - **入力するもの:** LINE のチャネルシークレット、チャネルアクセストークン、Hugging Face トークン。任意で言語（`en`/`ja`）、vision/動画のオン・オフ、CPU/メモリも選べます。
-- **作られるもの**（選んだリソースグループ内）: Log Analytics ワークスペース、Container Apps マネージド環境、Container App 本体 — メモリ内前提の設計のため**常時起動**のシングルレプリカ（`min = max = 1`）に固定されます。`App__PublicBaseUrl` はアプリ自身の HTTPS URL に自動設定されるので、FQDN の二段階設定は不要です。
+- **作られるもの**（選んだリソースグループ内）: Log Analytics ワークスペース、Container Apps マネージド環境、Container App 本体。**最大レプリカ数は常に 1**（メモリ内状態はレプリカ間で分割できないため）。**最小レプリカ数は既定 1（常時起動・推奨）**。試用なら **0**（アイドル時にゼロスケール）も選べます — 安いが、アイドルのたびにメモリ内状態（履歴・生成メディア）が消え、次のメッセージでコールドスタートします。`App__PublicBaseUrl` はアプリ自身の HTTPS URL に自動設定されるので、FQDN の二段階設定は不要です。
 - **完了後:** デプロイの**出力（Outputs）**を開くと `lineWebhookUrl` が LINE に登録すべき URL です。下記[LINE の Webhook を向ける](#5-line-の-webhook-を向ける)の手順で登録し、`curl https://<fqdn>/health` → `{"status":"ok"}` で確認します。
 
-> **コスト:** シングルレプリカは 24 時間稼働（ゼロスケールしない）なので、小額でも常時課金が発生します。不要になったらリソースグループを削除してください（ポータル、または `az group delete --name <rg>`）。
+> **コスト:** 最小レプリカ数 1 だと 24 時間稼働（ゼロスケールしない）なので、小額でも常時課金が発生します。0 にすればアイドル課金は避けられますが、コールドスタートと状態消失が代償です。不要になったらリソースグループを削除してください（ポータル、または `az group delete --name <rg>`）。
 
 **うまく動かないとき:**
 - **LINE の Verify が 401** — `Line__ChannelSecret` の値が間違っている（またはアクセストークンと取り違え）。ポータルの環境変数は secret 参照だと「値」欄に *secret 名*（例 `line-channel-secret`）を表示しますが、これは参照の正常表示で値そのものではありません。実値は `az containerapp secret show -n line-hf-bot -g <rg> --secret-name line-channel-secret` で確認し、直して（`az containerapp secret set ...`）アクティブリビジョンを再起動します。
