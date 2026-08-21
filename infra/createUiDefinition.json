@@ -1,0 +1,239 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.1-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "basics": [
+      {
+        "name": "appName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "App name",
+        "defaultValue": "line-hf-bot",
+        "toolTip": "Name for the Container App. Also the basis for its public hostname.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$",
+          "validationMessage": "2-32 chars: lowercase letters, numbers, and hyphens; must start with a letter and not end with a hyphen."
+        },
+        "visible": true
+      }
+    ],
+    "steps": [
+      {
+        "name": "line",
+        "label": "LINE credentials",
+        "elements": [
+          {
+            "name": "lineInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Get these from your Messaging API channel in the LINE Developers console (developers.line.biz).",
+              "uri": "https://developers.line.biz/console/"
+            }
+          },
+          {
+            "name": "lineChannelSecret",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Channel secret"
+            },
+            "toolTip": "LINE Messaging API channel secret.",
+            "constraints": {
+              "required": true
+            },
+            "options": {
+              "hideConfirmation": true
+            },
+            "visible": true
+          },
+          {
+            "name": "lineChannelAccessToken",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Channel access token"
+            },
+            "toolTip": "LINE Messaging API long-lived channel access token.",
+            "constraints": {
+              "required": true
+            },
+            "options": {
+              "hideConfirmation": true
+            },
+            "visible": true
+          }
+        ]
+      },
+      {
+        "name": "huggingface",
+        "label": "Hugging Face",
+        "elements": [
+          {
+            "name": "hfInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Create a token with Inference Providers permission at huggingface.co/settings/tokens.",
+              "uri": "https://huggingface.co/settings/tokens"
+            }
+          },
+          {
+            "name": "huggingFaceApiKey",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Access token"
+            },
+            "toolTip": "Hugging Face access token (starts with hf_).",
+            "constraints": {
+              "required": true
+            },
+            "options": {
+              "hideConfirmation": true
+            },
+            "visible": true
+          }
+        ]
+      },
+      {
+        "name": "options",
+        "label": "Options",
+        "elements": [
+          {
+            "name": "locale",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Language",
+            "defaultValue": "English",
+            "toolTip": "Language for user-facing text and the rich menu.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "English",
+                  "value": "en"
+                },
+                {
+                  "label": "日本語 (Japanese)",
+                  "value": "ja"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "visionEnabled",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Vision Q&A on photos",
+            "defaultValue": "Enabled",
+            "toolTip": "Ask questions about sent photos and generated images. Uses chat-level HF credits (light).",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Enabled",
+                  "value": true
+                },
+                {
+                  "label": "Disabled",
+                  "value": false
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "videoEnabled",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Video generation",
+            "defaultValue": "Disabled",
+            "toolTip": "Enables /video (text-to-video) and Make a video (image-to-video). Both run on the credit-heavy, slow fal-ai provider, so this is off by default.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Disabled",
+                  "value": false
+                },
+                {
+                  "label": "Enabled",
+                  "value": true
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "sizingInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "The app runs as a single always-on replica (required by its in-memory state), so it is billed 24/7. The defaults (0.5 vCPU / 1.0 GiB) are enough for personal use."
+            }
+          },
+          {
+            "name": "cpu",
+            "type": "Microsoft.Common.DropDown",
+            "label": "vCPU",
+            "defaultValue": "0.5",
+            "toolTip": "vCPU cores for the single replica.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "0.25", "value": "0.25" },
+                { "label": "0.5", "value": "0.5" },
+                { "label": "0.75", "value": "0.75" },
+                { "label": "1.0", "value": "1.0" },
+                { "label": "2.0", "value": "2.0" }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "memory",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Memory",
+            "defaultValue": "1.0Gi",
+            "toolTip": "Memory for the single replica. Must pair with the vCPU value per ACA's allowed combinations (roughly 2 GiB per vCPU).",
+            "constraints": {
+              "allowedValues": [
+                { "label": "0.5 GiB", "value": "0.5Gi" },
+                { "label": "1.0 GiB", "value": "1.0Gi" },
+                { "label": "1.5 GiB", "value": "1.5Gi" },
+                { "label": "2.0 GiB", "value": "2.0Gi" },
+                { "label": "4.0 GiB", "value": "4.0Gi" }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "image",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Container image",
+            "defaultValue": "docker.io/pierre3/line-hf-bot:latest",
+            "toolTip": "Container image to run. Use a pinned tag (e.g. :1.0.0) for reproducible deploys.",
+            "constraints": {
+              "required": true
+            },
+            "visible": true
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "appName": "[basics('appName')]",
+      "lineChannelSecret": "[steps('line').lineChannelSecret]",
+      "lineChannelAccessToken": "[steps('line').lineChannelAccessToken]",
+      "huggingFaceApiKey": "[steps('huggingface').huggingFaceApiKey]",
+      "locale": "[steps('options').locale]",
+      "visionEnabled": "[steps('options').visionEnabled]",
+      "videoEnabled": "[steps('options').videoEnabled]",
+      "cpu": "[steps('options').cpu]",
+      "memory": "[steps('options').memory]",
+      "image": "[steps('options').image]"
+    }
+  }
+}

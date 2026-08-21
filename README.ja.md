@@ -101,7 +101,11 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 トラブルシュートは **[Docker Hub から取得して起動](docs/deploy/docker-hub.ja.md)** を参照。
 
 ### 別の動かし方
-- **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — マネージドな HTTPS エンドポイントにホスティング（トンネル不要）。
+- **[Azure Container Apps](docs/deploy/azure-container-apps.ja.md)** — マネージドな HTTPS エンドポイントにホスティング（トンネル不要）。CLI 不要のワンクリック:
+
+  [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2FcreateUiDefinition.json)
+
+  ブラウザで 3 つの認証情報を入力するだけ。デプロイ完了時に Webhook URL が表示されるので、それを LINE に登録します。メモリ内前提の設計のため**常時起動**のシングルインスタンスで動き、わずかながら費用が発生し続けます。
 - **[ソースから動かす](docs/deploy/from-source.ja.md)** — クローンから Docker Compose または `dotnet run` でビルドして起動（開発・カスタマイズ向け）。
 
 ## コマンド
@@ -126,7 +130,7 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 | `Line__ChannelSecret` / `Line__ChannelAccessToken` | LINE チャネルの資格情報（必須） |
 | `Line__MaxIncomingImageBytes` / `Line__ContentFetchTimeoutSeconds` | 編集用に受信するユーザー画像の取得上限/タイムアウト（既定 10MB / 30秒） |
 | `HuggingFace__ApiKey` | Inference Providers 権限つき HF トークン（必須） |
-| `HuggingFace__ChatModel` | 既定 `Qwen/Qwen2.5-7B-Instruct`（非 gated） |
+| `HuggingFace__ChatModel` | チャットモデル。既定 `Qwen/Qwen2.5-72B-Instruct`（非 gated）。有効化している Inference Providers に配信依存 — 返答に失敗する場合は[チャット トラブルシュート](#チャット-トラブルシュート)参照 |
 | `HuggingFace__ImageEditModel` / `HuggingFace__ImageEditEndpoint` | 画像編集(image-to-image)。**fal-ai** プロバイダ経由（既定 `fal-ai/qwen-image-edit`）。hf-inference は image-to-image 非対応。fal-ai は hf-inference より 1 回あたりのクレジット単価が高い |
 | `HuggingFace__VideoModel` / `HuggingFace__VideoEndpoint` | 動画生成(text-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-5b/text-to-video`）。hf-inference は text-to-video 非対応。fal-ai はクレジット消費が激しく遅い |
 | `HuggingFace__ImageToVideoModel` / `HuggingFace__ImageToVideoEndpoint` | 画像→動画(image-to-video)。**fal-ai** プロバイダ経由（既定 `fal-ai/wan/v2.2-a14b/image-to-video`、軽い代替 `fal-ai/wan-i2v`）。hf-inference は image-to-video 非対応。A14B は text-to-video 既定の 5B よりクレジット単価が高い。`App__VideoEnabled` で制御 |
@@ -144,6 +148,15 @@ LINE コンソールの QR からボットを友だち追加して、メッセ�
 - **`model_not_supported`** — auto ルーティングがプロバイダを選べていない。`HuggingFace__VisionModel` は必ず `model:provider` 形式で provider を pin し（例 `Qwen/Qwen2.5-VL-72B-Instruct:ovhcloud`）、そのプロバイダを https://huggingface.co/settings/inference-providers で有効化する。
 - **`capacity_exhausted`(503) / タイムアウト** — プロバイダが混雑 or コールド。再試行するか、別プロバイダ/モデルへ。動作確認済みの代替: `zai-org/GLM-4.5V:novita`、`google/gemma-3-27b-it:deepinfra`（gemma はライセンス同意が必要）、`Qwen/Qwen2.5-VL-7B-Instruct:featherless-ai`。切替先プロバイダを先に有効化すること。
 - コールドの初回は遅いことがある。`HuggingFace__VisionTimeoutSeconds`（既定 120）で上限。
+
+### チャット トラブルシュート
+チャットも Hugging Face Inference Providers 経由なので、`HuggingFace__ChatModel` はあなたのトークンで有効化したプロバイダが配信しているモデルである必要があります。素のメッセージに対して **「エラーが起きました」** が返るときは、まずコンテナのログを確認 — router からの `model_not_supported` / `400` が典型的な原因です。
+- **プロバイダの配信カタログは随時変わる**ため、以前は使えていたモデルが、設定を何も変えていなくても配信停止になることがあります。現在使えるモデルを一覧して差し替えてください:
+  ```
+  curl https://router.huggingface.co/v1/models -H "Authorization: Bearer <HFトークン>"
+  ```
+  そのうえで `HuggingFace__ChatModel` を配信中のチャットモデルに設定（必要なら `model:provider` で provider を pin）し、https://huggingface.co/settings/inference-providers でプロバイダを有効化します。
+- 72B 既定より軽い/安い代替: `meta-llama/Llama-3.1-8B-Instruct`、`Qwen/Qwen3-4B-Instruct-2507`。汎用チャットには `*-Coder`（コード専用）・`*-VL`（vision）は避けます。
 
 ## 使っている技術
 - .NET 10 / ASP.NET Minimal API

@@ -79,7 +79,7 @@ HTTPS URL、クラウド利用時はアプリの HTTPS エンドポイント。�
 
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
-| `HuggingFace__ChatModel` | `Qwen/Qwen2.5-7B-Instruct` | チャットモデル（非 gated）。gated モデルは事前に HF でライセンス承諾が必要。 |
+| `HuggingFace__ChatModel` | `Qwen/Qwen2.5-72B-Instruct` | チャットモデル（非 gated）。トークンで有効化したプロバイダが配信しているモデルであること。配信カタログは変わるため、`model_not_supported` で失敗したら `curl https://router.huggingface.co/v1/models -H "Authorization: Bearer <token>"` で現行モデルを確認して差し替える。gated モデルは事前に HF でライセンス承諾が必要。 |
 | `HuggingFace__ChatEndpoint` | `https://router.huggingface.co` | チャットのベース URL。Semantic Kernel が `/v1/chat/completions` を付けるので `/v1` は**含めない**。 |
 | `HuggingFace__ImageModel` | `stabilityai/stable-diffusion-3-medium-diffusers` | text-to-image モデル。 |
 | `HuggingFace__ImageEndpoint` | `https://router.huggingface.co/hf-inference/models/{model}` | text-to-image エンドポイント。`{model}` が `ImageModel` に置換。 |
