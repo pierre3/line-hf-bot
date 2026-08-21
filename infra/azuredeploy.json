@@ -1,0 +1,237 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "6369453059032757587"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources. Defaults to the resource group location."
+      }
+    },
+    "appName": {
+      "type": "string",
+      "defaultValue": "line-hf-bot",
+      "minLength": 2,
+      "maxLength": 32,
+      "metadata": {
+        "description": "Name for the Container App and the basis for its public hostname."
+      }
+    },
+    "image": {
+      "type": "string",
+      "defaultValue": "docker.io/pierre3/line-hf-bot:latest",
+      "metadata": {
+        "description": "Container image to run. Use a pinned tag (e.g. :1.0.0) for reproducible deploys."
+      }
+    },
+    "lineChannelSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "LINE Messaging API channel secret."
+      }
+    },
+    "lineChannelAccessToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "LINE Messaging API channel access token (long-lived)."
+      }
+    },
+    "huggingFaceApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Hugging Face access token with Inference Providers permission."
+      }
+    },
+    "locale": {
+      "type": "string",
+      "defaultValue": "en",
+      "allowedValues": [
+        "en",
+        "ja"
+      ],
+      "metadata": {
+        "description": "UI language for user-facing text and the rich menu."
+      }
+    },
+    "videoEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable video (/video text-to-video and the \"Make a video\" image-to-video). Both run on the credit-heavy, slow fal-ai provider, so this is off by default."
+      }
+    },
+    "visionEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable vision Q&A on sent photos and generated images. Uses chat-level HF credits (not fal)."
+      }
+    },
+    "cpu": {
+      "type": "string",
+      "defaultValue": "0.5",
+      "allowedValues": [
+        "0.25",
+        "0.5",
+        "0.75",
+        "1.0",
+        "2.0"
+      ],
+      "metadata": {
+        "description": "vCPU cores for the single replica."
+      }
+    },
+    "memory": {
+      "type": "string",
+      "defaultValue": "1.0Gi",
+      "allowedValues": [
+        "0.5Gi",
+        "1.0Gi",
+        "1.5Gi",
+        "2.0Gi",
+        "4.0Gi"
+      ],
+      "metadata": {
+        "description": "Memory for the single replica. Must pair with the CPU value per ACA allowed combinations."
+      }
+    }
+  },
+  "variables": {
+    "targetPort": 8080
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[format('{0}-logs', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}-env', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('appName'))), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('appName'))), '2022-10-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('appName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('appName')))]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": "[variables('targetPort')]",
+            "transport": "auto"
+          },
+          "secrets": [
+            {
+              "name": "line-channel-secret",
+              "value": "[parameters('lineChannelSecret')]"
+            },
+            {
+              "name": "line-channel-access-token",
+              "value": "[parameters('lineChannelAccessToken')]"
+            },
+            {
+              "name": "huggingface-api-key",
+              "value": "[parameters('huggingFaceApiKey')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "[parameters('appName')]",
+              "image": "[parameters('image')]",
+              "resources": {
+                "cpu": "[json(parameters('cpu'))]",
+                "memory": "[parameters('memory')]"
+              },
+              "env": [
+                {
+                  "name": "Line__ChannelSecret",
+                  "secretRef": "line-channel-secret"
+                },
+                {
+                  "name": "Line__ChannelAccessToken",
+                  "secretRef": "line-channel-access-token"
+                },
+                {
+                  "name": "HuggingFace__ApiKey",
+                  "secretRef": "huggingface-api-key"
+                },
+                {
+                  "name": "App__PublicBaseUrl",
+                  "value": "[format('https://{0}', format('{0}.{1}', parameters('appName'), reference(resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('appName'))), '2024-03-01').defaultDomain))]"
+                },
+                {
+                  "name": "App__Locale",
+                  "value": "[parameters('locale')]"
+                },
+                {
+                  "name": "App__VideoEnabled",
+                  "value": "[string(parameters('videoEnabled'))]"
+                },
+                {
+                  "name": "App__VisionEnabled",
+                  "value": "[string(parameters('visionEnabled'))]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('appName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "appUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Public HTTPS base URL of the deployed app."
+      },
+      "value": "[format('https://{0}', format('{0}.{1}', parameters('appName'), reference(resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('appName'))), '2024-03-01').defaultDomain))]"
+    },
+    "lineWebhookUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Webhook URL to register in the LINE Developers console."
+      },
+      "value": "[format('{0}/webhook', format('https://{0}', format('{0}.{1}', parameters('appName'), reference(resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('appName'))), '2024-03-01').defaultDomain)))]"
+    }
+  }
+}

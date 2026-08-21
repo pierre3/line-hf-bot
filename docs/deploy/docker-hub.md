@@ -81,7 +81,7 @@ Everything else has a sensible default and is optional. Add only what you want t
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `HuggingFace__ChatModel` | `Qwen/Qwen2.5-7B-Instruct` | Chat model (non-gated). Gated models need you to accept their license on HF first. |
+| `HuggingFace__ChatModel` | `Qwen/Qwen2.5-72B-Instruct` | Chat model (non-gated). Must be served by a provider your token has enabled; provider catalogs change, so if chat fails with `model_not_supported`, list current models with `curl https://router.huggingface.co/v1/models -H "Authorization: Bearer <token>"` and switch. Gated models need you to accept their license on HF first. |
 | `HuggingFace__ChatEndpoint` | `https://router.huggingface.co` | Chat base URL. Semantic Kernel appends `/v1/chat/completions`, so do **not** include `/v1`. |
 | `HuggingFace__ImageModel` | `stabilityai/stable-diffusion-3-medium-diffusers` | Text-to-image model. |
 | `HuggingFace__ImageEndpoint` | `https://router.huggingface.co/hf-inference/models/{model}` | Text-to-image endpoint; `{model}` is replaced with `ImageModel`. |

@@ -8,11 +8,33 @@ Docker Hub に公開したイメージを **Azure Container Apps (ACA)** で動�
 > - `max-replicas 1` — 2 個目のレプリカは別々のメモリを持つため、状態や `/media/{id}` URL がレプリカ間で壊れます。
 > - `min-replicas 1` — min 0 だとアイドル時にゼロスケールして全状態を失い、コールドスタートで Webhook 配信が遅れます。
 
-事前準備: Azure サブスクリプション、[Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)、Docker Hub に公開済みのイメージ（[ガイド](docker-hub.ja.md)）、LINE と Hugging Face の資格情報。
+## ワンクリックデプロイ（Deploy to Azure ボタン）
+
+一番手軽な方法 — CLI もクローンも不要。ボタンを押すと Azure ポータルがフォーム付きで開くので、3 つの認証情報を入力してデプロイするだけです。
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpierre3%2Fline-hf-bot%2Fmain%2Finfra%2FcreateUiDefinition.json)
+
+- **入力するもの:** LINE のチャネルシークレット、チャネルアクセストークン、Hugging Face トークン。任意で言語（`en`/`ja`）、vision/動画のオン・オフ、CPU/メモリも選べます。
+- **作られるもの**（選んだリソースグループ内）: Log Analytics ワークスペース、Container Apps マネージド環境、Container App 本体 — メモリ内前提の設計のため**常時起動**のシングルレプリカ（`min = max = 1`）に固定されます。`App__PublicBaseUrl` はアプリ自身の HTTPS URL に自動設定されるので、FQDN の二段階設定は不要です。
+- **完了後:** デプロイの**出力（Outputs）**を開くと `lineWebhookUrl` が LINE に登録すべき URL です。下記[LINE の Webhook を向ける](#5-line-の-webhook-を向ける)の手順で登録し、`curl https://<fqdn>/health` → `{"status":"ok"}` で確認します。
+
+> **コスト:** シングルレプリカは 24 時間稼働（ゼロスケールしない）なので、小額でも常時課金が発生します。不要になったらリソースグループを削除してください（ポータル、または `az group delete --name <rg>`）。
+
+**うまく動かないとき:**
+- **LINE の Verify が 401** — `Line__ChannelSecret` の値が間違っている（またはアクセストークンと取り違え）。ポータルの環境変数は secret 参照だと「値」欄に *secret 名*（例 `line-channel-secret`）を表示しますが、これは参照の正常表示で値そのものではありません。実値は `az containerapp secret show -n line-hf-bot -g <rg> --secret-name line-channel-secret` で確認し、直して（`az containerapp secret set ...`）アクティブリビジョンを再起動します。
+- **チャットで「エラーが起きました」** — チャットモデルが有効プロバイダで配信されていません。[チャット トラブルシュート](../../README.ja.md#チャット-トラブルシュート)参照（`GET /v1/models` で現行モデルを確認し `HuggingFace__ChatModel` を設定）。
+
+テンプレートは [`infra/`](../../infra/) にあります: `main.bicep`（元）→ `azuredeploy.json`（ボタンが読み込むファイル）と、フォーム定義の `createUiDefinition.json`。
 
 ---
 
-## 1. CLI の初回セットアップ
+## 手動デプロイ（Azure CLI）
+
+CLI を使いたい、またはフォーム以上に細かく調整したい場合は、以下の手順で同じ構成を手作業で作れます。
+
+事前準備: Azure サブスクリプション、[Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)、Docker Hub に公開済みのイメージ（[ガイド](docker-hub.ja.md)）、LINE と Hugging Face の資格情報。
+
+### 1. CLI の初回セットアップ
 
 ```bash
 az login
@@ -21,7 +43,7 @@ az provider register --namespace Microsoft.App --wait
 az provider register --namespace Microsoft.OperationalInsights --wait
 ```
 
-## 2. リソースグループと環境の作成
+### 2. リソースグループと環境の作成
 
 ```bash
 RG=line-hf-bot-rg
@@ -32,7 +54,7 @@ az group create --name $RG --location $LOC
 az containerapp env create --name $ENV --resource-group $RG --location $LOC
 ```
 
-## 3. Container App の作成
+### 3. Container App の作成
 
 トークンは**シークレット**として保存し、env var から `secretref:` で参照します。`App__PublicBaseUrl` はまだ入れません — 先にアプリの FQDN が必要です（次の手順で設定）。
 
@@ -64,7 +86,7 @@ az containerapp create \
 
 > イメージは公開 Docker Hub から取得するのでレジストリ認証は不要です。**非公開**リポジトリの場合は `--registry-server docker.io --registry-username <user> --registry-password <token>` を追加します。
 
-## 4. `App__PublicBaseUrl` をアプリ自身の URL に設定
+### 4. `App__PublicBaseUrl` をアプリ自身の URL に設定
 
 割り当てられた HTTPS FQDN を取得し、それを設定し直します（新しいリビジョンが作られます）。
 
@@ -83,7 +105,7 @@ az containerapp update --name $APP --resource-group $RG \
 curl "https://$FQDN/health"      # -> {"status":"ok"}
 ```
 
-## 5. LINE の Webhook を向ける
+### 5. LINE の Webhook を向ける
 
 [LINE Developers コンソール](https://developers.line.biz/)で **Webhook の利用**をオン、応答メッセージをオフにし、Webhook URL を `https://<FQDN>/webhook` に設定します（`line` CLI のショートカットとアプリ内での動作確認手順は [LINE 動作確認の手順](docker-hub.ja.md#4-line-の-webhook-を向ける) を参照）。
 
