@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Each release is published to Docker Hub as
 [`pierre3/line-hf-bot`](https://hub.docker.com/r/pierre3/line-hf-bot) (multi-arch: `linux/amd64`, `linux/arm64`).
 
+## [1.3.1] - 2026-10-07
+
+### Security
+- Rebuilt on the latest `aspnet:10.0-noble-chiseled-extra` base image, picking up Ubuntu fixes for openssl
+  (1 High, 2 Medium, 8 Low) and glibc (6 Medium). Docker Scout findings drop from 20 to 3; the remaining
+  3 (glibc ×2, icu ×1) have no upstream fix yet.
+- The release workflow now always pulls the newest base image (`pull: true`) instead of relying on the build cache.
+
 ## [1.2.0] - 2026-08-18
 
 ### Added
