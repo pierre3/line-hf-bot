@@ -16,6 +16,24 @@ Each release is published to Docker Hub as
   3 (glibc ×2, icu ×1) have no upstream fix yet.
 - The release workflow now always pulls the newest base image (`pull: true`) instead of relying on the build cache.
 
+## [1.3.0] - 2026-08-21
+
+### Added
+- **Deploy to Azure button** for one-click deployment to Azure Container Apps — no CLI needed. Enter your
+  LINE and Hugging Face credentials in the portal form; the webhook URL is shown when the deploy finishes.
+  The form also lets you choose the language, vision/video options, container size, chat model
+  (`chatModel`), and minimum replicas (`minReplicas`: `1` = always-on, recommended; `0` = scale to zero, cheaper
+  but loses in-memory state and cold-starts after idle). See [Azure Container Apps](docs/deploy/azure-container-apps.md).
+- **Chat troubleshooting** section in the README (how to find a currently served chat model via `GET /v1/models`).
+
+### Changed
+- Default chat model `HuggingFace__ChatModel` is now `Qwen/Qwen2.5-72B-Instruct` (was `Qwen/Qwen2.5-7B-Instruct`,
+  which providers stopped serving and which caused chat to fail with `model_not_supported`).
+
+### Fixed
+- The Azure deploy form no longer allows invalid CPU/memory combinations: a single "Container size" dropdown
+  lists only the pairs Container Apps accepts.
+
 ## [1.2.0] - 2026-08-18
 
 ### Added
@@ -65,6 +83,8 @@ Each release is published to Docker Hub as
   - 🌐 **English / Japanese** UI (`App__Locale`).
   - 🐳 Published as a multi-arch Docker image with CI/CD release automation.
 
+[1.3.1]: https://github.com/pierre3/line-hf-bot/releases/tag/v1.3.1
+[1.3.0]: https://github.com/pierre3/line-hf-bot/releases/tag/v1.3.0
 [1.2.0]: https://github.com/pierre3/line-hf-bot/releases/tag/v1.2.0
 [1.1.1]: https://github.com/pierre3/line-hf-bot/releases/tag/v1.1.1
 [1.1.0]: https://github.com/pierre3/line-hf-bot/releases/tag/v1.1.0
